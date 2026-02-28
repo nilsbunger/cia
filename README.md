@@ -1,6 +1,13 @@
-Multi-agent coding tool
+# CIA Multi-agent coding tool
 
-Key notes:
+## Set up:
+`pnpm install`
 
-- Need to `pnpm link --global` to make it executable in path.
--
+## Running:
+1. `pnpm start` (invoke from directory of the repo you're working on)
+
+OR
+
+2. Set up globally:
+`pnpm link --global`
+Then just run 'cia'
