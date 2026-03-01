@@ -4,7 +4,10 @@
 `pnpm install`
 
 ## Running:
-1. `pnpm start` (invoke from directory of the repo you're working on)
+
+1. `pnpm --dir ../cia start`
+* Run it from your repo root. 
+* Adjust `../cia` to point to the cia repo root.
 
 OR
 
