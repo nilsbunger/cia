@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import {spawn} from "node:child_process";
-import {fileURLToPath} from "node:url";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
-import {createRequire} from "node:module";
+import { createRequire } from "node:module";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +24,7 @@ try {
   process.exit(1);
 }
 
-const target = path.resolve(pkgRoot, "src/agents-tui.tsx");
+const target = path.resolve(pkgRoot, "src/index.tsx");
 
 // Node >=20.6 recommended; check & warn
 const [major, minor] = process.versions.node.split(".").map(Number);
