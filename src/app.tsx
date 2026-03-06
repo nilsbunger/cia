@@ -4,11 +4,12 @@ import { Box, Text, useApp } from "ink"
 import chalk from "chalk"
 import { createWorktree, openEditor } from "./cmd-ops"
 import { computeRows } from "./cmd-helpers"
-import { getConfig, setBranchPrefix } from "./config"
+import { createProject, getConfig, setBranchPrefix } from "./config"
 import { BRANCH_PREFIX } from "./constants"
 import { LOG_FILE } from "./utils"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
+import { InitPrompt } from "./components/init-prompt"
 import { Header, RowView } from "./branch-list/view"
 import { useTuiInput } from "./actions/use-tui-input"
 import { SlashCommandView, ConfigView } from "./commands/view"
@@ -45,12 +46,16 @@ const App: React.FC = () => {
     setLoading(false)
   }
 
-  useEffect(() => {
-    getConfig().then((c) => setBranchPrefixState(c.branchPrefix))
-  }, [])
   // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is not a dependency
   useEffect(() => {
-    refresh()
+    getConfig().then((r) => {
+      if (r.ok) {
+        setBranchPrefixState(r.config.branchPrefix)
+        refresh()
+      } else {
+        setMode("init")
+      }
+    })
   }, [])
   useInterval(() => {
     if (mode === "list") refresh()
@@ -70,6 +75,13 @@ const App: React.FC = () => {
     setIdx,
     refresh,
     exit,
+    onCreateProject: async () => {
+      const config = await createProject()
+      setBranchPrefixState(config.branchPrefix)
+      setMode("list")
+      setMsg(`Created cia.jsonc with prefix ${config.branchPrefix}`)
+      await refresh()
+    },
   })
 
   return (
@@ -110,15 +122,18 @@ const App: React.FC = () => {
         />
       )}
 
+      {mode === "init" && <InitPrompt />}
+
       {mode === "config" && (
         <ConfigView
           currentPrefix={branchPrefix}
           onSubmit={async (prefix) => {
             await setBranchPrefix(prefix)
-            const config = await getConfig()
+            const result = await getConfig()
+            const config = result.ok ? result.config : { branchPrefix }
             setBranchPrefixState(config.branchPrefix)
             setMode("list")
-            setMsg(`Branch prefix set to ${config.branchPrefix}`)
+            setMsg(`Branch prefix set to ${config?.branchPrefix ?? branchPrefix}`)
             await refresh()
           }}
           onCancel={() => {

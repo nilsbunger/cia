@@ -33,6 +33,7 @@ export type TuiInputContext = {
   setIdx: (fn: (i: number) => number) => void
   refresh: () => Promise<void>
   exit: () => void
+  onCreateProject?: () => Promise<void>
 }
 
 export function useTuiInput(ctx: TuiInputContext) {
@@ -50,6 +51,7 @@ export function useTuiInput(ctx: TuiInputContext) {
     setIdx,
     refresh,
     exit,
+    onCreateProject,
   } = ctx
 
   useInput(async (input, key) => {
@@ -58,6 +60,17 @@ export function useTuiInput(ctx: TuiInputContext) {
       return
     }
     if (mode === "create" || mode === "command" || mode === "config") return
+
+    if (mode === "init") {
+      if (input === "y" && onCreateProject) {
+        onCreateProject()
+        return
+      }
+      if (input === "n" || key.escape) {
+        exit()
+      }
+      return
+    }
 
     if (mode === "confirm-delete") {
       if (input === "y" && deleteCandidate) {

@@ -24,6 +24,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "ink-text-input": "^6.0.0"
+    "ink-text-input": "^6.0.0",
+    "jsonc-parser": "^3.3.1"
   }
 }

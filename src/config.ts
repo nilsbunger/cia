@@ -1,59 +1,67 @@
 import * as fs from "node:fs"
 import * as os from "node:os"
-import * as path from "path"
-import { getRepoRoot } from "./repo"
+import * as path from "node:path"
+import { parse } from "jsonc-parser"
 import { BRANCH_PREFIX } from "./constants"
 
-const CONFIG_DIR = ".cia"
-const CONFIG_FILE = "config.json"
+const CONFIG_FILE = "cia.jsonc"
 
 export interface CiaConfig {
   branchPrefix: string
 }
+
+export type ConfigResult =
+  | { ok: true; config: CiaConfig }
+  | { ok: false; noProject: true }
 
 function getDefaultBranchPrefix(): string {
   const username = os.userInfo().username
   return username ? `${username}/` : BRANCH_PREFIX
 }
 
-function configPath(root: string): string {
-  return path.join(root, CONFIG_DIR, CONFIG_FILE)
+function configPath(): string {
+  return path.join(process.cwd(), CONFIG_FILE)
 }
 
-export async function getConfig(): Promise<CiaConfig> {
-  const root = await getRepoRoot()
-  const file = configPath(root)
+export function configFilePath(): string {
+  return configPath()
+}
+
+export async function getConfig(): Promise<ConfigResult> {
+  const file = configPath()
   if (!fs.existsSync(file)) {
-    const defaultPrefix = getDefaultBranchPrefix()
-    const config: CiaConfig = { branchPrefix: defaultPrefix }
-    // Persist default so user gets their username as prefix without manual setup
-    const dir = path.join(root, CONFIG_DIR)
-    fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
-    return { ...config }
+    return { ok: false, noProject: true }
   }
   try {
     const raw = fs.readFileSync(file, "utf-8")
-    const data = JSON.parse(raw) as Partial<CiaConfig>
+    const data = parse(raw) as Partial<CiaConfig>
     const prefix =
       typeof data.branchPrefix === "string" ? data.branchPrefix : getDefaultBranchPrefix()
     return {
-      branchPrefix: prefix.endsWith("/") ? prefix : prefix + "/",
+      ok: true,
+      config: {
+        branchPrefix: prefix.endsWith("/") ? prefix : prefix + "/",
+      },
     }
   } catch {
-    return { branchPrefix: getDefaultBranchPrefix() }
+    return { ok: true, config: { branchPrefix: getDefaultBranchPrefix() } }
   }
 }
 
+export async function createProject(): Promise<CiaConfig> {
+  const file = configPath()
+  const defaultPrefix = getDefaultBranchPrefix()
+  const config: CiaConfig = { branchPrefix: defaultPrefix }
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
+  return { ...config }
+}
+
 export async function setBranchPrefix(prefix: string): Promise<void> {
-  const root = await getRepoRoot()
-  const dir = path.join(root, CONFIG_DIR)
-  const file = configPath(root)
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
+  const file = configPath()
   const normalized = prefix.trim().endsWith("/") ? prefix.trim() : prefix.trim() + "/"
-  const config = await getConfig()
-  config.branchPrefix = normalized
+  const result = await getConfig()
+  const currentConfig =
+    result.ok && result.config ? result.config : { branchPrefix: getDefaultBranchPrefix() }
+  const config = { ...currentConfig, branchPrefix: normalized }
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
 }

@@ -146,7 +146,9 @@ export async function checkForConflicts(
 }
 
 export async function computeRows(): Promise<Row[]> {
-  const { branchPrefix } = await getConfig()
+  const result = await getConfig()
+  if (!result.ok) return []
+  const { branchPrefix } = result.config
   const root = await getRepoRoot()
   const branches = await listAgentBranches(branchPrefix)
   const rows: Row[] = []
