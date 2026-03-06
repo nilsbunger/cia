@@ -3,6 +3,7 @@ import chalk from "chalk"
 import { mergeIntoMain, pushBranch, syncBranch } from "../git-ops"
 import { deleteBranchAndWorktree, openEditor } from "../cmd-ops"
 import { checkDeleteIssues, checkForConflicts, ensureWorktree } from "../cmd-helpers"
+import { resolveRunCommand } from "../config"
 import { runService, killService, getRunningService } from "../service"
 import { log } from "../utils"
 import { Mode, Row } from "../types"
@@ -249,7 +250,7 @@ export function useTuiInput(ctx: TuiInputContext) {
       setMsg(`Starting service for ${selected.branch}…`)
       try {
         const dir = await ensureWorktree(selected.branch)
-        await runService(repoRoot, selected.branch, dir, runCommand)
+        await runService(repoRoot, selected.branch, dir, resolveRunCommand(runCommand))
         setMsg(`Service started for ${selected.branch} (new terminal)`)
       } catch (e: any) {
         setMsg(chalk.red(`Failed: ${e.shortMessage || e.message}`))
