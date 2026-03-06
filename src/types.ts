@@ -14,6 +14,7 @@ export type Mode =
   | "config"
   | "init"
   | "confirm-delete"
+  | "confirm-force-delete"
   | "confirm-merge"
   | "confirm-sync"
   | "confirm-kill-service"

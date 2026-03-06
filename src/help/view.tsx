@@ -11,13 +11,13 @@ export const HelpView: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) =
       <Text> enter Open selected branch in Cursor/VSCode (creates worktree if needed)</Text>
       <Text> n New agent branch (create + open)</Text>
       <Text> / Slash commands (e.g. /config for branch prefix)</Text>
-      <Text> t Run service (opens new terminal; requires run command in /config)</Text>
+      <Text> r Run service (opens new terminal; requires run command in /config)</Text>
       <Text> x Kill running service (with confirmation)</Text>
       <Text> s Sync (rebase selected onto local main)</Text>
       <Text> p Push to remote for backup</Text>
       <Text> m Merge selected → main</Text>
       <Text> d Delete selected branch + worktree + remote backup (warns if unmerged)</Text>
-      <Text> r Refresh list</Text>
+      <Text> D Force delete (with confirmation; cleans worktree)</Text>
       <Text> ? Toggle help</Text>
       <Text> q Quit</Text>
       <Box marginTop={1} flexDirection="column">

@@ -8,6 +8,7 @@ import { createProject, getConfig, setBranchPrefix, setRunCommand } from "./conf
 import { BRANCH_PREFIX } from "./constants"
 import { LOG_FILE } from "./utils"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
+import { ConfirmForceDeletePrompt } from "./components/confirm-force-delete-prompt"
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
@@ -35,6 +36,7 @@ const App: React.FC = () => {
     uncommittedFiles: string[]
     worktreeIssues: string[]
   } | null>(null)
+  const [forceDeleteCandidate, setForceDeleteCandidate] = useState<string | null>(null)
   const [operationCandidate, setOperationCandidate] = useState<{
     branch: string
     operation: "merge" | "sync"
@@ -73,11 +75,13 @@ const App: React.FC = () => {
     idx,
     selected,
     deleteCandidate,
+    forceDeleteCandidate,
     operationCandidate,
     killCandidate,
     setMode,
     setMsg,
     setDeleteCandidate,
+    setForceDeleteCandidate,
     setOperationCandidate,
     setKillCandidate,
     setIdx,
@@ -198,6 +202,10 @@ const App: React.FC = () => {
         />
       )}
 
+      {mode === "confirm-force-delete" && forceDeleteCandidate && (
+        <ConfirmForceDeletePrompt branch={forceDeleteCandidate} />
+      )}
+
       {(mode === "confirm-merge" || mode === "confirm-sync") && operationCandidate && (
         <ConfirmOperationPrompt
           branch={operationCandidate.branch}
@@ -229,8 +237,8 @@ const App: React.FC = () => {
       </Box>
       <Box>
         <Text dimColor>
-          Hints: ↑/↓ select • enter open • n new • / commands • t run service • x kill service • s
-          sync • p backup • m merge • d delete • r refresh • ? help • q quit
+          Hints: ↑/↓ select • enter open • n new • / commands • r run service • x kill service • s
+          sync • p backup • m merge • d delete • D force delete • ? help • q quit
         </Text>
       </Box>
     </Box>

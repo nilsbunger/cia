@@ -26,11 +26,13 @@ export type TuiInputContext = {
   idx: number
   selected: Row | undefined
   deleteCandidate: DeleteCandidate | null
+  forceDeleteCandidate: string | null
   operationCandidate: OperationCandidate | null
   killCandidate: string | null
   setMode: (m: Mode) => void
   setMsg: (m: string) => void
   setDeleteCandidate: (d: DeleteCandidate | null) => void
+  setForceDeleteCandidate: (b: string | null) => void
   setOperationCandidate: (o: OperationCandidate | null) => void
   setKillCandidate: (k: string | null) => void
   setIdx: (fn: (i: number) => number) => void
@@ -48,11 +50,13 @@ export function useTuiInput(ctx: TuiInputContext) {
     idx,
     selected,
     deleteCandidate,
+    forceDeleteCandidate,
     operationCandidate,
     killCandidate,
     setMode,
     setMsg,
     setDeleteCandidate,
+    setForceDeleteCandidate,
     setOperationCandidate,
     setKillCandidate,
     setIdx,
@@ -77,6 +81,34 @@ export function useTuiInput(ctx: TuiInputContext) {
       }
       if (input === "n" || key.escape) {
         exit()
+      }
+      return
+    }
+
+    if (mode === "confirm-force-delete") {
+      if (input === "y" && forceDeleteCandidate) {
+        log(`User confirmed force delete (D) for branch: ${forceDeleteCandidate}`)
+        setMode("list")
+        setMsg(`Force deleting ${forceDeleteCandidate}…`)
+        setForceDeleteCandidate(null)
+        try {
+          await deleteBranchAndWorktree(forceDeleteCandidate, true)
+          log(`Force delete completed successfully for branch: ${forceDeleteCandidate}`)
+          setMsg(`Deleted ${forceDeleteCandidate}`)
+          await refresh()
+          setIdx((i) => Math.min(i, Math.max(0, rows.length - 2)))
+        } catch (e: any) {
+          log(`Force delete failed for branch: ${forceDeleteCandidate}`, {
+            error: e.message,
+            shortMessage: e.shortMessage,
+          })
+          setMsg(chalk.red(`Delete failed: ${e.shortMessage || e.message}`))
+        }
+      } else if (input === "n" || key.escape) {
+        log(`User cancelled force delete for branch: ${forceDeleteCandidate}`)
+        setMode("list")
+        setForceDeleteCandidate(null)
+        setMsg("")
       }
       return
     }
@@ -205,11 +237,6 @@ export function useTuiInput(ctx: TuiInputContext) {
       return
     }
     if (input === "r") {
-      refresh()
-      return
-    }
-
-    if (input === "t") {
       if (!repoRoot) return
       if (!runCommand) {
         setMsg(chalk.red("No run command configured. Use /config to set it."))
@@ -230,6 +257,7 @@ export function useTuiInput(ctx: TuiInputContext) {
       await refresh()
       return
     }
+
 
     if (input === "x") {
       if (!repoRoot) return
@@ -340,6 +368,14 @@ export function useTuiInput(ctx: TuiInputContext) {
       return
     }
 
+    if (input === "D") {
+      log(`User pressed 'D' to force delete branch: ${selected.branch}`)
+      setForceDeleteCandidate(selected.branch)
+      setMode("confirm-force-delete")
+      setMsg("")
+      return
+    }
+
     if (input === "d") {
       log(`User pressed 'd' to delete branch: ${selected.branch}`)
       setMsg(`Checking for issues…`)
@@ -365,7 +401,14 @@ export function useTuiInput(ctx: TuiInputContext) {
             error: e.message,
             shortMessage: e.shortMessage,
           })
-          setMsg(chalk.red(`Delete failed: ${e.shortMessage || e.message}`))
+          const errMsg = e.shortMessage || e.message || ""
+          const isBranchNotClean =
+            /not fully merged|not merged|checked out|Cannot delete/i.test(errMsg)
+          if (isBranchNotClean) {
+            setMsg(chalk.red(`Delete failed: ${errMsg}. Use D to force delete.`))
+          } else {
+            setMsg(chalk.red(`Delete failed: ${errMsg}`))
+          }
         }
       } else {
         log(`Branch ${selected.branch} has issues, showing confirmation prompt`, {
