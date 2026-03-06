@@ -1,11 +1,13 @@
 import { execa } from "execa"
 import * as path from "path"
-import { BRANCH_PREFIX } from "./constants"
 import { log } from "./utils"
 import * as fs from "node:fs"
 import { branchDirname } from "./fs-ops"
+import { getRepoRoot } from "./repo"
 
-export async function listAgentBranches(): Promise<string[]> {
+export { getRepoRoot } from "./repo"
+
+export async function listAgentBranches(branchPrefix: string): Promise<string[]> {
   const root = await getRepoRoot()
   const { stdout } = await execa("git", ["branch", "-a", "--format=%(refname:short)"], {
     cwd: root,
@@ -16,23 +18,12 @@ export async function listAgentBranches(): Promise<string[]> {
 
   const filtered = allBranches
     .filter((name) => !name.startsWith("remotes/"))
-    .filter((name) => name.startsWith(BRANCH_PREFIX))
+    .filter((name) => name.startsWith(branchPrefix))
     .sort((a, b) => a.localeCompare(b))
 
   log(`listAgentBranches: Filtered agent branches:`, filtered)
 
   return filtered
-}
-
-export async function getRepoRoot(): Promise<string> {
-  // When run from a worktree, --show-toplevel returns the worktree path.
-  // Use --git-common-dir to find the main .git directory, then get its parent.
-  const { stdout } = await execa("git", ["rev-parse", "--git-common-dir"])
-  const commonDir = stdout.trim()
-  // commonDir is either absolute path or relative path like ".git"
-  const absoluteCommonDir = path.isAbsolute(commonDir) ? commonDir : path.resolve(commonDir)
-  // The repo root is the parent of the .git directory
-  return path.dirname(absoluteCommonDir)
 }
 
 export async function mergeIntoMain(branch: string) {

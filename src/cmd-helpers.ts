@@ -1,5 +1,6 @@
 import { execa } from "execa"
 import { branchDirname } from "./fs-ops"
+import { getConfig } from "./config"
 import { getRepoRoot, listAgentBranches, validateWorktree } from "./git-ops"
 import * as fs from "node:fs"
 import { createWorktree } from "./cmd-ops"
@@ -147,8 +148,9 @@ export async function checkForConflicts(
 }
 
 export async function computeRows(): Promise<Row[]> {
+  const { branchPrefix } = await getConfig()
   const root = await getRepoRoot()
-  const branches = await listAgentBranches()
+  const branches = await listAgentBranches(branchPrefix)
   const rows: Row[] = []
   for (const branch of branches) {
     const dir = branchDirname(root, branch)

@@ -4,4 +4,4 @@ export type Row = {
   worktreeDir: string | null
   selected?: boolean
 }
-export type Mode = "list" | "help" | "create" | "confirm-delete" | "confirm-merge" | "confirm-sync"
+export type Mode = "list" | "help" | "create" | "command" | "config" | "confirm-delete" | "confirm-merge" | "confirm-sync"

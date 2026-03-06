@@ -5,8 +5,11 @@ import chalk from "chalk"
 import { mergeIntoMain, pushBranch, syncBranch } from "./git-ops"
 import { createWorktree, deleteBranchAndWorktree, openEditor } from "./cmd-ops"
 import { CreatePrompt } from "./components/create-prompt"
+import { PrefixPrompt } from "./components/prefix-prompt"
+import { SlashCommandPrompt } from "./components/slash-command-prompt"
 import { log, LOG_FILE } from "./utils"
 import { checkDeleteIssues, checkForConflicts, computeRows, ensureWorktree } from "./cmd-helpers"
+import { getConfig, setBranchPrefix } from "./config"
 import { BRANCH_PREFIX } from "./constants"
 import { Header, Help, RowView } from "./components/ui-helpers"
 import { Mode, Row } from "./types"
@@ -35,6 +38,7 @@ function useInterval(callback: () => void, ms: number) {
 
 const App: React.FC = () => {
   const { exit } = useApp()
+  const [branchPrefix, setBranchPrefixState] = useState<string>(BRANCH_PREFIX)
   const [mode, setMode] = useState<Mode>("list")
   const [rows, setRows] = useState<Row[]>([])
   const [idx, setIdx] = useState(0)
@@ -61,6 +65,9 @@ const App: React.FC = () => {
   }
 
   useEffect(() => {
+    getConfig().then((c) => setBranchPrefixState(c.branchPrefix))
+  }, [])
+  useEffect(() => {
     refresh()
   }, [])
   useInterval(() => {
@@ -76,6 +83,14 @@ const App: React.FC = () => {
     }
     if (mode === "create") {
       // input handled by CreatePrompt component
+      return
+    }
+    if (mode === "command") {
+      // input handled by SlashCommandPrompt component
+      return
+    }
+    if (mode === "config") {
+      // input handled by PrefixPrompt component
       return
     }
     if (mode === "confirm-delete") {
@@ -187,7 +202,12 @@ const App: React.FC = () => {
       return
     }
 
-    if (!selected && input !== "n") return
+    if (!selected && input !== "n" && input !== "/") return
+
+    if (input === "/") {
+      setMode("command")
+      return
+    }
 
     if (key.return) {
       // open
@@ -343,7 +363,7 @@ const App: React.FC = () => {
         <Text>
           {" "}
           {chalk.dim("(")}
-          {BRANCH_PREFIX}
+          {branchPrefix}
           {chalk.dim("… branches) – press ? for help")}
         </Text>
       </Box>
@@ -353,16 +373,56 @@ const App: React.FC = () => {
 
       {mode === "help" && (
         <Box borderStyle="round" paddingX={1} paddingY={0} marginTop={1}>
-          <Help />
+          <Help branchPrefix={branchPrefix} />
         </Box>
+      )}
+
+      {mode === "command" && (
+        <SlashCommandPrompt
+          onSubmit={(cmd) => {
+            const name = cmd.replace(/^\//, "").toLowerCase()
+            if (name === "config") {
+              setMode("config")
+              setMsg("")
+            } else if (name) {
+              setMsg(chalk.red(`Unknown command: /${name}`))
+              setMode("list")
+            } else {
+              setMode("list")
+              setMsg("")
+            }
+          }}
+          onCancel={() => {
+            setMode("list")
+            setMsg("")
+          }}
+        />
+      )}
+
+      {mode === "config" && (
+        <PrefixPrompt
+          currentPrefix={branchPrefix}
+          onSubmit={async (prefix) => {
+            await setBranchPrefix(prefix)
+            const config = await getConfig()
+            setBranchPrefixState(config.branchPrefix)
+            setMode("list")
+            setMsg(`Branch prefix set to ${config.branchPrefix}`)
+            await refresh()
+          }}
+          onCancel={() => {
+            setMode("list")
+            setMsg("")
+          }}
+        />
       )}
 
       {mode === "create" && (
         <CreatePrompt
-          prefix={BRANCH_PREFIX}
+          prefix={branchPrefix}
           onSubmit={async (branchName) => {
-            if (!branchName.startsWith(BRANCH_PREFIX)) {
-              setMsg(chalk.red(`Branch must start with ${BRANCH_PREFIX}`))
+            if (!branchName.startsWith(branchPrefix)) {
+              setMsg(chalk.red(`Branch must start with ${branchPrefix}`))
               setMode("list")
               return
             }
@@ -407,7 +467,7 @@ const App: React.FC = () => {
           <Box flexDirection="column">
             {loading && <Text dimColor>Loading…</Text>}
             {!loading && rows.length === 0 && (
-              <Text dimColor>No {BRANCH_PREFIX} branches yet. Press “n” to create one.</Text>
+              <Text dimColor>No {branchPrefix} branches yet. Press “n” to create one.</Text>
             )}
             {!loading &&
               rows.map((r, i) => <RowView key={r.branch} row={r} selected={i === idx} />)}
@@ -420,7 +480,7 @@ const App: React.FC = () => {
       </Box>
       <Box>
         <Text dimColor>
-          Hints: ↑/↓ select • enter open • n new • s sync • p backup • m merge • d delete • r
+          Hints: ↑/↓ select • enter open • n new • / commands • s sync • p backup • m merge • d delete • r
           refresh • ? help • q quit
         </Text>
       </Box>

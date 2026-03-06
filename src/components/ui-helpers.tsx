@@ -1,17 +1,16 @@
 import { Box, Text } from "ink"
 import chalk from "chalk"
-import { BRANCH_PREFIX } from "../constants"
 import { WORKTREES_DIR_NAME } from "../constants"
 import { Row } from "../types"
 import React from "react"
 
-
-export const Help: React.FC = () => (
+export const Help: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) => (
   <Box flexDirection="column">
     <Text>{chalk.bold("Keys")}</Text>
     <Text> ↑/↓ Move selection</Text>
     <Text> enter Open selected branch in Cursor/VSCode (creates worktree if needed)</Text>
     <Text> n New agent branch (create + open)</Text>
+    <Text> / Slash commands (e.g. /config for branch prefix)</Text>
     <Text> s Sync (rebase selected onto local main)</Text>
     <Text> p Push to remote for backup</Text>
     <Text> m Merge selected → main</Text>
@@ -21,7 +20,7 @@ export const Help: React.FC = () => (
     <Text> q Quit</Text>
     <Box marginTop={1} flexDirection="column">
       <Text>{chalk.bold("Notes")}</Text>
-      <Text>• Branches must start with {BRANCH_PREFIX}</Text>
+      <Text>• Branches must start with {branchPrefix}</Text>
       <Text>• Worktrees live in {WORKTREES_DIR_NAME}/, named with slashes → "__"</Text>
       <Text>• Status column shows ↑ahead↓behind (vs local main) and *dirty-count</Text>
       <Text>• All operations are local; push is optional for remote backup</Text>
