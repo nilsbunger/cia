@@ -4,10 +4,11 @@ import { Box, Text, useApp } from "ink"
 import chalk from "chalk"
 import { createWorktree, openEditor } from "./cmd-ops"
 import { computeRows } from "./cmd-helpers"
-import { createProject, getConfig, setBranchPrefix } from "./config"
+import { createProject, getConfig, setBranchPrefix, setRunCommand } from "./config"
 import { BRANCH_PREFIX } from "./constants"
 import { LOG_FILE } from "./utils"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
+import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
 import { Header, RowView } from "./branch-list/view"
@@ -21,6 +22,8 @@ import type { Mode, Row } from "./types"
 const App: React.FC = () => {
   const { exit } = useApp()
   const [branchPrefix, setBranchPrefixState] = useState<string>(BRANCH_PREFIX)
+  const [runCommand, setRunCommandState] = useState<string>("")
+  const [repoRoot, setRepoRoot] = useState<string>("")
   const [mode, setMode] = useState<Mode>("list")
   const [rows, setRows] = useState<Row[]>([])
   const [idx, setIdx] = useState(0)
@@ -37,6 +40,7 @@ const App: React.FC = () => {
     operation: "merge" | "sync"
     conflictingFiles: string[]
   } | null>(null)
+  const [killCandidate, setKillCandidate] = useState<string | null>(null)
   const selected = rows[idx]
 
   const refresh = async () => {
@@ -51,6 +55,8 @@ const App: React.FC = () => {
     getConfig().then((r) => {
       if (r.ok) {
         setBranchPrefixState(r.config.branchPrefix)
+        setRunCommandState(r.config.runCommand ?? "")
+        setRepoRoot(r.repoRoot)
         refresh()
       } else {
         setMode("init")
@@ -68,18 +74,27 @@ const App: React.FC = () => {
     selected,
     deleteCandidate,
     operationCandidate,
+    killCandidate,
     setMode,
     setMsg,
     setDeleteCandidate,
     setOperationCandidate,
+    setKillCandidate,
     setIdx,
     refresh,
     exit,
+    repoRoot,
+    runCommand,
     onCreateProject: async () => {
       const config = await createProject()
-      setBranchPrefixState(config.branchPrefix)
+      const result = await getConfig()
+      if (result.ok) {
+        setBranchPrefixState(result.config.branchPrefix)
+        setRunCommandState(result.config.runCommand ?? "")
+        setRepoRoot(result.repoRoot)
+      }
       setMode("list")
-      setMsg(`Created cia.jsonc with prefix ${config.branchPrefix}`)
+      setMsg(`Created cia-repo.jsonc and cia-user.jsonc with prefix ${config.branchPrefix}`)
       await refresh()
     },
   })
@@ -127,13 +142,16 @@ const App: React.FC = () => {
       {mode === "config" && (
         <ConfigView
           currentPrefix={branchPrefix}
-          onSubmit={async (prefix) => {
+          currentRunCommand={runCommand}
+          onSubmit={async (prefix, cmd) => {
             await setBranchPrefix(prefix)
+            await setRunCommand(cmd)
             const result = await getConfig()
-            const config = result.ok ? result.config : { branchPrefix }
+            const config = result.ok ? result.config : { branchPrefix, runCommand }
             setBranchPrefixState(config.branchPrefix)
+            setRunCommandState(config.runCommand ?? "")
             setMode("list")
-            setMsg(`Branch prefix set to ${config?.branchPrefix ?? branchPrefix}`)
+            setMsg(`Config saved`)
             await refresh()
           }}
           onCancel={() => {
@@ -188,6 +206,10 @@ const App: React.FC = () => {
         />
       )}
 
+      {mode === "confirm-kill-service" && killCandidate && (
+        <ConfirmKillPrompt branch={killCandidate} />
+      )}
+
       {mode === "list" && (
         <Box flexDirection="column" marginTop={1}>
           <Header />
@@ -207,8 +229,8 @@ const App: React.FC = () => {
       </Box>
       <Box>
         <Text dimColor>
-          Hints: ↑/↓ select • enter open • n new • / commands • s sync • p backup • m merge • d
-          delete • r refresh • ? help • q quit
+          Hints: ↑/↓ select • enter open • n new • / commands • t run service • x kill service • s
+          sync • p backup • m merge • d delete • r refresh • ? help • q quit
         </Text>
       </Box>
     </Box>

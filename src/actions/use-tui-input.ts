@@ -3,6 +3,7 @@ import chalk from "chalk"
 import { mergeIntoMain, pushBranch, syncBranch } from "../git-ops"
 import { deleteBranchAndWorktree, openEditor } from "../cmd-ops"
 import { checkDeleteIssues, checkForConflicts, ensureWorktree } from "../cmd-helpers"
+import { runService, killService, getRunningService } from "../service"
 import { log } from "../utils"
 import { Mode, Row } from "../types"
 
@@ -26,13 +27,17 @@ export type TuiInputContext = {
   selected: Row | undefined
   deleteCandidate: DeleteCandidate | null
   operationCandidate: OperationCandidate | null
+  killCandidate: string | null
   setMode: (m: Mode) => void
   setMsg: (m: string) => void
   setDeleteCandidate: (d: DeleteCandidate | null) => void
   setOperationCandidate: (o: OperationCandidate | null) => void
+  setKillCandidate: (k: string | null) => void
   setIdx: (fn: (i: number) => number) => void
   refresh: () => Promise<void>
   exit: () => void
+  repoRoot: string
+  runCommand: string
   onCreateProject?: () => Promise<void>
 }
 
@@ -44,13 +49,17 @@ export function useTuiInput(ctx: TuiInputContext) {
     selected,
     deleteCandidate,
     operationCandidate,
+    killCandidate,
     setMode,
     setMsg,
     setDeleteCandidate,
     setOperationCandidate,
+    setKillCandidate,
     setIdx,
     refresh,
     exit,
+    repoRoot,
+    runCommand,
     onCreateProject,
   } = ctx
 
@@ -156,6 +165,28 @@ export function useTuiInput(ctx: TuiInputContext) {
       return
     }
 
+    if (mode === "confirm-kill-service") {
+      if (input === "y" && killCandidate) {
+        log(`User confirmed kill service for branch: ${killCandidate}`)
+        setMode("list")
+        setMsg(`Killing service…`)
+        setKillCandidate(null)
+        try {
+          await killService(repoRoot)
+          setMsg(`Service killed`)
+        } catch (e: any) {
+          setMsg(chalk.red(`Kill failed: ${e.shortMessage || e.message}`))
+        }
+        await refresh()
+      } else if (input === "n" || key.escape) {
+        log(`User cancelled kill service`)
+        setMode("list")
+        setKillCandidate(null)
+        setMsg("")
+      }
+      return
+    }
+
     // list mode
     if (key.upArrow) {
       setIdx((i) => Math.max(0, i - 1))
@@ -175,6 +206,41 @@ export function useTuiInput(ctx: TuiInputContext) {
     }
     if (input === "r") {
       refresh()
+      return
+    }
+
+    if (input === "t") {
+      if (!repoRoot) return
+      if (!runCommand) {
+        setMsg(chalk.red("No run command configured. Use /config to set it."))
+        return
+      }
+      if (!selected) {
+        setMsg(chalk.red("Select a branch first"))
+        return
+      }
+      setMsg(`Starting service for ${selected.branch}…`)
+      try {
+        const dir = await ensureWorktree(selected.branch)
+        await runService(repoRoot, selected.branch, dir, runCommand)
+        setMsg(`Service started for ${selected.branch} (new terminal)`)
+      } catch (e: any) {
+        setMsg(chalk.red(`Failed: ${e.shortMessage || e.message}`))
+      }
+      await refresh()
+      return
+    }
+
+    if (input === "x") {
+      if (!repoRoot) return
+      const running = await getRunningService(repoRoot)
+      if (!running) {
+        setMsg(chalk.red("No service is running"))
+        return
+      }
+      setKillCandidate(running.branch)
+      setMode("confirm-kill-service")
+      setMsg("")
       return
     }
 

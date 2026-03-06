@@ -3,6 +3,8 @@ export type Row = {
   status: string // short status (e.g., ahead/behind/dirty)
   worktreeDir: string | null
   selected?: boolean
+  /** Whether the service is running for this branch */
+  serviceRunning?: boolean
 }
 export type Mode =
   | "list"
@@ -14,3 +16,4 @@ export type Mode =
   | "confirm-delete"
   | "confirm-merge"
   | "confirm-sync"
+  | "confirm-kill-service"

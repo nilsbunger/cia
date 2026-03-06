@@ -149,8 +149,10 @@ export async function computeRows(): Promise<Row[]> {
   const result = await getConfig()
   if (!result.ok) return []
   const { branchPrefix } = result.config
-  const root = await getRepoRoot()
+  const root = result.repoRoot
   const branches = await listAgentBranches(branchPrefix)
+  const { getRunningService } = await import("./service")
+  const running = await getRunningService(root)
   const rows: Row[] = []
   for (const branch of branches) {
     const dir = branchDirname(root, branch)
@@ -192,7 +194,12 @@ export async function computeRows(): Promise<Row[]> {
     } catch {
       status = ""
     }
-    rows.push({ branch, status, worktreeDir: exists ? dir : null })
+    rows.push({
+      branch,
+      status,
+      worktreeDir: exists ? dir : null,
+      serviceRunning: running?.branch === branch,
+    })
   }
   return rows
 }

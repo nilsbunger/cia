@@ -12,7 +12,7 @@ export const InitPrompt: React.FC = () => {
       marginTop={1}>
       <Text>{chalk.bold.cyan("No cia project found")}</Text>
       <Box marginTop={1}>
-        <Text>Create a cia project here? (creates cia.jsonc)</Text>
+        <Text>Create a cia project here? (creates cia-repo.jsonc and cia-user.jsonc)</Text>
       </Box>
       <Box marginTop={1}>
         <Text dimColor>y to create • n or Esc to quit</Text>

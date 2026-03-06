@@ -1,6 +1,6 @@
 import React from "react"
 import { SlashCommandPrompt } from "../components/slash-command-prompt"
-import { PrefixPrompt } from "../components/prefix-prompt"
+import { ConfigPrompt } from "../components/config-prompt"
 
 export type SlashCommandResult = "config" | { unknown: string } | "cancel"
 
@@ -21,11 +21,13 @@ export const SlashCommandView: React.FC<{
 
 export const ConfigView: React.FC<{
   currentPrefix: string
-  onSubmit: (prefix: string) => Promise<void>
+  currentRunCommand: string
+  onSubmit: (prefix: string, runCommand: string) => Promise<void>
   onCancel: () => void
-}> = ({ currentPrefix, onSubmit, onCancel }) => (
-  <PrefixPrompt
+}> = ({ currentPrefix, currentRunCommand, onSubmit, onCancel }) => (
+  <ConfigPrompt
     currentPrefix={currentPrefix}
+    currentRunCommand={currentRunCommand}
     onSubmit={onSubmit}
     onCancel={onCancel}
   />

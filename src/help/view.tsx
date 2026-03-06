@@ -11,6 +11,8 @@ export const HelpView: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) =
       <Text> enter Open selected branch in Cursor/VSCode (creates worktree if needed)</Text>
       <Text> n New agent branch (create + open)</Text>
       <Text> / Slash commands (e.g. /config for branch prefix)</Text>
+      <Text> t Run service (opens new terminal; requires run command in /config)</Text>
+      <Text> x Kill running service (with confirmation)</Text>
       <Text> s Sync (rebase selected onto local main)</Text>
       <Text> p Push to remote for backup</Text>
       <Text> m Merge selected → main</Text>

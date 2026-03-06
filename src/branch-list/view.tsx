@@ -11,19 +11,22 @@ const Col: React.FC<{ s: number; text: string }> = ({ s, text }) => {
 export const Header: React.FC = () => (
   <Box>
     <Col s={38} text={chalk.underline("Branch")} />
-    <Col s={20} text={chalk.underline("Worktree")} />
-    <Col s={20} text={chalk.underline("Status")} />
+    <Col s={12} text={chalk.underline("Worktree")} />
+    <Col s={8} text={chalk.underline("Run")} />
+    <Col s={18} text={chalk.underline("Status")} />
   </Box>
 )
 
 export const RowView: React.FC<{ row: Row; selected: boolean }> = ({ row, selected }) => {
   const worktree = row.worktreeDir ? "yes" : "—"
+  const running = row.serviceRunning ? chalk.green("●") : "—"
   const displayBranch = selected ? chalk.inverse(row.branch) : row.branch
   return (
     <Box>
       <Col s={38} text={displayBranch} />
-      <Col s={10} text={worktree} />
-      <Col s={10} text={row.status || ""} />
+      <Col s={12} text={worktree} />
+      <Col s={8} text={running} />
+      <Col s={18} text={row.status || ""} />
     </Box>
   )
 }
