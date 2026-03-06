@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react"
+import type React from "react"
+import { useEffect, useState } from "react"
 import { Box, Text, useApp } from "ink"
 import chalk from "chalk"
 import { createWorktree, openEditor } from "./cmd-ops"
@@ -14,7 +15,7 @@ import { SlashCommandView, ConfigView } from "./commands/view"
 import { CreateView } from "./create/view"
 import { HelpView } from "./help/view"
 import { useInterval } from "./hooks/use-interval"
-import { Mode, Row } from "./types"
+import type { Mode, Row } from "./types"
 
 const App: React.FC = () => {
   const { exit } = useApp()
@@ -47,6 +48,7 @@ const App: React.FC = () => {
   useEffect(() => {
     getConfig().then((c) => setBranchPrefixState(c.branchPrefix))
   }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is not a dependency
   useEffect(() => {
     refresh()
   }, [])
@@ -142,6 +144,7 @@ const App: React.FC = () => {
               await openEditor(dir)
               setMsg(`Created and opened ${branchName}`)
               await refresh()
+            // biome-ignore lint/suspicious/noExplicitAny: ok for exceptions
             } catch (e: any) {
               setMsg(chalk.red(`Failed: ${e.shortMessage || e.message}`))
             }

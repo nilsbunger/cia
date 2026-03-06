@@ -1,4 +1,4 @@
-import React from "react"
+import type React from "react"
 import { CreatePrompt } from "../components/create-prompt"
 
 export const CreateView: React.FC<{

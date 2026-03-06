@@ -1,4 +1,4 @@
-import React from "react"
+import type React from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
 
@@ -31,7 +31,7 @@ export const ConfirmOperationPrompt: React.FC<{
 
       <Box flexDirection="column" marginTop={1} marginLeft={2}>
         {conflictingFiles.slice(0, 5).map((file, i) => (
-          <Box key={i}>
+          <Box key={file}>
             <Text dimColor>{file}</Text>
           </Box>
         ))}

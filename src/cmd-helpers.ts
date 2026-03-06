@@ -5,18 +5,15 @@ import { getRepoRoot, listAgentBranches, validateWorktree } from "./git-ops"
 import * as fs from "node:fs"
 import { createWorktree } from "./cmd-ops"
 import { log } from "./utils"
-import { Row } from "./types"
+import type { Row } from "./types"
 
 export async function ensureWorktree(branch: string): Promise<string> {
   const root = await getRepoRoot()
   const dir = branchDirname(root, branch)
-
-  if (fs.existsSync(dir)) {
-    return await validateWorktree(branch)
-  } else {
-    return await createWorktree(branch)
-  }
+  if (fs.existsSync(dir)) return await validateWorktree(branch)
+  return await createWorktree(branch)
 }
+
 export async function checkDeleteIssues(branch: string): Promise<{
   isClean: boolean
   unmergedCommits: string[]
@@ -90,6 +87,7 @@ export async function checkDeleteIssues(branch: string): Promise<{
       worktreeIssues,
     })
     return { isClean, unmergedCommits, uncommittedFiles, worktreeIssues }
+  // biome-ignore lint/suspicious/noExplicitAny: ok
   } catch (e: any) {
     // If command fails, assume not clean
     log(`checkDeleteIssues: Exception caught`, {
