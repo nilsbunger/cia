@@ -3,8 +3,7 @@ import { WORKTREES_DIR_NAME } from "./constants"
 import { execa } from "execa"
 
 export function branchDirname(root: string, branch: string): string {
-  const dir = branch.replaceAll("/", "__")
-  return path.join(root, WORKTREES_DIR_NAME, dir)
+  return path.join(root, WORKTREES_DIR_NAME, branch)
 }
 export async function which(cmd: string): Promise<string | null> {
   try {

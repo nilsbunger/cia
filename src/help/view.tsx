@@ -23,7 +23,7 @@ export const HelpView: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) =
       <Box marginTop={1} flexDirection="column">
         <Text>{chalk.bold("Notes")}</Text>
         <Text>• Branches must start with {branchPrefix}</Text>
-        <Text>• Worktrees live in {WORKTREES_DIR_NAME}/, named with slashes → "__"</Text>
+        <Text>• Worktrees live in {WORKTREES_DIR_NAME}/, nested by branch path</Text>
         <Text>• Status column shows ↑ahead↓behind (vs local main) and *dirty-count</Text>
         <Text>• All operations are local; push is optional for remote backup</Text>
       </Box>
