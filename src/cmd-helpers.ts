@@ -1,8 +1,9 @@
 import { execa } from "execa"
 import { branchDirname } from "./fs-ops"
 import { getConfig } from "./config"
-import { getRepoRoot, listAgentBranches, validateWorktree } from "./git-ops"
+import { getRepoRoot, listWorktrees, validateWorktree } from "./git-ops"
 import * as fs from "node:fs"
+import * as path from "node:path"
 import { createWorktree } from "./cmd-ops"
 import { log } from "./utils"
 import type { Row } from "./types"
@@ -169,56 +170,58 @@ export async function computeRows(): Promise<Row[]> {
   if (!result.ok) return []
   const { branchPrefix } = result.config
   const root = result.repoRoot
-  const branches = await listAgentBranches(branchPrefix)
+  const worktrees = await listWorktrees(branchPrefix)
   const { getRunningService } = await import("./service")
   const running = await getRunningService(root)
   const rows: Row[] = []
-  for (const { name: branch, lastCommitDate } of branches) {
-    const dir = branchDirname(root, branch)
-    const exists = fs.existsSync(dir)
+  for (const wt of worktrees) {
+    const dir = wt.dir
+    const branch = wt.branch ?? path.basename(dir)
     // branch status summary
     let status = ""
     try {
-      const cwd = exists ? dir : root
-
       // Check for merge/rebase in progress
       let inProgress = ""
-      if (exists) {
-        const mergeHeadPath = `${dir}/.git/MERGE_HEAD`
-        const rebaseHeadPath = `${dir}/.git/rebase-merge`
-        const rebaseApplyPath = `${dir}/.git/rebase-apply`
+      const mergeHeadPath = `${dir}/.git/MERGE_HEAD`
+      const rebaseHeadPath = `${dir}/.git/rebase-merge`
+      const rebaseApplyPath = `${dir}/.git/rebase-apply`
 
-        if (fs.existsSync(mergeHeadPath)) {
-          inProgress = "MERGE"
-        } else if (fs.existsSync(rebaseHeadPath) || fs.existsSync(rebaseApplyPath)) {
-          inProgress = "REBASE"
-        }
+      if (fs.existsSync(mergeHeadPath)) {
+        inProgress = "MERGE"
+      } else if (fs.existsSync(rebaseHeadPath) || fs.existsSync(rebaseApplyPath)) {
+        inProgress = "REBASE"
       }
 
       // Get ahead/behind info (compared to local main)
-      const { stdout: revListOut } = await execa(
-        "git",
-        ["rev-list", "--left-right", "--count", `main...${branch}`],
-        { cwd },
-      )
-      const [ahead, behind] = revListOut.trim().split("\t").map(Number)
-      const aheadBehind = ahead || behind ? `↑${ahead}↓${behind}` : ""
+      if (wt.branch) {
+        const { stdout: revListOut } = await execa(
+          "git",
+          ["rev-list", "--left-right", "--count", `main...${wt.branch}`],
+          { cwd: dir },
+        )
+        const [ahead, behind] = revListOut.trim().split("\t").map(Number)
+        const aheadBehind = ahead || behind ? `↑${ahead}↓${behind}` : ""
+        status = inProgress ? `${inProgress} ${aheadBehind}` : aheadBehind
+      } else {
+        status = inProgress || "detached"
+      }
 
       // Get dirty files count
-      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd })
+      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd: dir })
       const dirtyCount = statusOut.trim().split("\n").filter(Boolean).length
       const dirty = dirtyCount ? `*${dirtyCount}` : ""
 
-      status = [inProgress, aheadBehind, dirty].filter(Boolean).join(" ")
+      status = [status, dirty].filter(Boolean).join(" ")
     } catch {
       status = ""
     }
     rows.push({
       branch,
+      hasBranch: wt.branch !== null,
       status,
-      worktreeDir: exists ? dir : null,
+      worktreeDir: dir,
       serviceRunning: running?.branch === branch,
-      lastCommitAge: formatCommitAge(lastCommitDate),
+      lastCommitAge: formatCommitAge(wt.lastCommitDate),
     })
   }
   return rows

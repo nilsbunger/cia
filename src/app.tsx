@@ -224,7 +224,7 @@ const App: React.FC = () => {
           <Box flexDirection="column">
             {loading && <Text dimColor>Loading…</Text>}
             {!loading && rows.length === 0 && (
-              <Text dimColor>No {branchPrefix} branches yet. Press "n" to create one.</Text>
+              <Text dimColor>No {branchPrefix} worktrees yet. Press "n" to create one.</Text>
             )}
             {!loading &&
               rows.map((r, i) => <RowView key={r.branch} row={r} selected={i === idx} />)}

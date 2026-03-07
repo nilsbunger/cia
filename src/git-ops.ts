@@ -7,23 +7,62 @@ import { getRepoRoot } from "./repo"
 
 export { getRepoRoot } from "./repo"
 
-export async function listAgentBranches(branchPrefix: string): Promise<string[]> {
-  const root = await getRepoRoot()
-  const { stdout } = await execa("git", ["branch", "-a", "--format=%(refname:short)"], {
-    cwd: root,
+export type Worktree = {
+  dir: string
+  branch: string | null
+  lastCommitDate: number
+}
+
+export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
+  const repoRoot = await getRepoRoot()
+
+  const { stdout: worktreeList } = await execa("git", ["worktree", "list", "--porcelain"], {
+    cwd: repoRoot,
   })
-  const allBranches = stdout.split("\n").filter(Boolean) // remove empty lines
 
-  log(`listAgentBranches: All branches from ${root}:`, allBranches)
+  const worktrees: Worktree[] = []
+  for (const block of worktreeList.split("\n\n").filter(Boolean)) {
+    const lines = block.split("\n")
+    const dirLine = lines.find((l) => l.startsWith("worktree "))
+    const branchLine = lines.find((l) => l.startsWith("branch refs/heads/"))
+    const isDetached = lines.some((l) => l === "detached")
+    if (!dirLine) continue
 
-  const filtered = allBranches
-    .filter((name) => !name.startsWith("remotes/"))
-    .filter((name) => name.startsWith(branchPrefix))
-    .sort((a, b) => a.localeCompare(b))
+    const dir = dirLine.replace("worktree ", "").trim()
+    const branch = branchLine ? branchLine.replace("branch refs/heads/", "").trim() : null
 
-  log(`listAgentBranches: Filtered agent branches:`, filtered)
+    // Skip the main worktree (the repo root itself)
+    if (dir === repoRoot) continue
 
-  return filtered
+    // Filter: worktree's branch must match prefix, or if detached, the dir path should indicate prefix
+    const matchesPrefix = branch
+      ? branch.startsWith(branchPrefix)
+      : false
+    if (!matchesPrefix && !isDetached) continue
+    // For detached worktrees, skip if they don't look like they belong to us
+    if (isDetached && !matchesPrefix) continue
+
+    // Get last commit date from HEAD of the worktree
+    let lastCommitDate = 0
+    try {
+      const ref = branch ?? "HEAD"
+      const { stdout: tsOut } = await execa(
+        "git",
+        ["log", "-1", "--format=%ct", ref],
+        { cwd: dir },
+      )
+      lastCommitDate = Number(tsOut.trim()) || 0
+    } catch {
+      // ignore
+    }
+
+    worktrees.push({ dir, branch, lastCommitDate })
+  }
+
+  worktrees.sort((a, b) => b.lastCommitDate - a.lastCommitDate)
+  log(`listWorktrees: Found ${worktrees.length} worktrees matching prefix "${branchPrefix}"`, worktrees.map((w) => w.branch ?? w.dir))
+
+  return worktrees
 }
 
 export async function mergeIntoMain(branch: string) {
@@ -48,12 +87,14 @@ export async function pushBranch(branch: string) {
   await validateWorktree(branch)
   await execa("git", ["push", "-u", "origin", branch])
 }
+
 export async function syncBranch(branch: string) {
   // Validate worktree exists and is in correct state
   const dir = await validateWorktree(branch)
   await execa("git", ["checkout", branch], { cwd: dir })
   await execa("git", ["rebase", "main"], { cwd: dir })
 }
+
 export async function validateWorktree(branch: string): Promise<string> {
   const root = await getRepoRoot()
   const dir = branchDirname(root, branch)
@@ -66,7 +107,7 @@ export async function validateWorktree(branch: string): Promise<string> {
   // Check 2: Directory is actually a git worktree (has .git file, not .git directory)
   const gitPath = path.join(dir, ".git")
   if (!fs.existsSync(gitPath)) {
-    throw new Error(`Directory is not a git worktree (missing .git): ${dir}`)
+    throw new Error(`Directory is not a git worktree (missing .git file): ${dir}`)
   }
 
   // Check 3: Worktree is registered with git
