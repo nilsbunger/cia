@@ -13,6 +13,7 @@ export const Header: React.FC = () => (
     <Col s={38} text={chalk.underline("Branch")} />
     <Col s={12} text={chalk.underline("Worktree")} />
     <Col s={8} text={chalk.underline("Run")} />
+    <Col s={14} text={chalk.underline("Last commit")} />
     <Col s={18} text={chalk.underline("Status")} />
   </Box>
 )
@@ -26,6 +27,7 @@ export const RowView: React.FC<{ row: Row; selected: boolean }> = ({ row, select
       <Col s={38} text={displayBranch} />
       <Col s={12} text={worktree} />
       <Col s={8} text={running} />
+      <Col s={14} text={row.lastCommitAge ?? "—"} />
       <Col s={18} text={row.status || ""} />
     </Box>
   )

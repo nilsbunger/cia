@@ -14,7 +14,7 @@ import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
 import { Header, RowView } from "./branch-list/view"
 import { useTuiInput } from "./actions/use-tui-input"
-import { SlashCommandView, ConfigView } from "./commands/view"
+import { SlashCommandView, ConfigView } from "./slash-commands/view"
 import { CreateView } from "./create/view"
 import { HelpView } from "./help/view"
 import { useInterval } from "./hooks/use-interval"
@@ -120,7 +120,7 @@ const App: React.FC = () => {
 
       {mode === "help" && <HelpView branchPrefix={branchPrefix} />}
 
-      {mode === "command" && (
+      {mode === "slash-command" && (
         <SlashCommandView
           onSubmit={(result) => {
             if (result === "config") {

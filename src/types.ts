@@ -5,12 +5,14 @@ export type Row = {
   selected?: boolean
   /** Whether the service is running for this branch */
   serviceRunning?: boolean
+  /** Human-readable age of last commit (e.g. "today", "3 days ago") */
+  lastCommitAge?: string
 }
 export type Mode =
   | "list"
   | "help"
   | "create"
-  | "command"
+  | "slash-command"
   | "config"
   | "init"
   | "confirm-delete"

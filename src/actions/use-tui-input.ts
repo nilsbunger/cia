@@ -73,7 +73,7 @@ export function useTuiInput(ctx: TuiInputContext) {
       if (input === "?" || input === "q" || key.escape) setMode("list")
       return
     }
-    if (mode === "create" || mode === "command" || mode === "config") return
+    if (mode === "create" || mode === "slash-command" || mode === "config") return
 
     if (mode === "init") {
       if (input === "y" && onCreateProject) {
@@ -276,7 +276,7 @@ export function useTuiInput(ctx: TuiInputContext) {
     if (!selected && input !== "n" && input !== "/") return
 
     if (input === "/") {
-      setMode("command")
+      setMode("slash-command")
       return
     }
 

@@ -7,6 +7,25 @@ import { createWorktree } from "./cmd-ops"
 import { log } from "./utils"
 import type { Row } from "./types"
 
+/** Human-readable age; use date only if older than 60 days */
+function formatCommitAge(unixTs: number): string {
+  const now = Date.now() / 1000
+  const diffSec = now - unixTs
+  const days = diffSec / 86400
+  if (days < 1) return "today"
+  if (days < 2) return "yesterday"
+  if (days < 7) return `${Math.floor(days)} days ago`
+  if (days <= 60) {
+    const weeks = Math.floor(days / 7)
+    return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`
+  }
+  return new Date(unixTs * 1000).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
 export async function ensureWorktree(branch: string): Promise<string> {
   const root = await getRepoRoot()
   const dir = branchDirname(root, branch)
@@ -154,7 +173,7 @@ export async function computeRows(): Promise<Row[]> {
   const { getRunningService } = await import("./service")
   const running = await getRunningService(root)
   const rows: Row[] = []
-  for (const branch of branches) {
+  for (const { name: branch, lastCommitDate } of branches) {
     const dir = branchDirname(root, branch)
     const exists = fs.existsSync(dir)
     // branch status summary
@@ -199,6 +218,7 @@ export async function computeRows(): Promise<Row[]> {
       status,
       worktreeDir: exists ? dir : null,
       serviceRunning: running?.branch === branch,
+      lastCommitAge: formatCommitAge(lastCommitDate),
     })
   }
   return rows
