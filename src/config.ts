@@ -50,19 +50,18 @@ export async function getConfig(): Promise<ConfigResult> {
   }
 }
 
-function ensureGitignoreHasUserConfig(projRoot: string): void {
+function ensureGitignoreEntries(projRoot: string, entries: string[]): void {
   const gitignorePath = path.join(projRoot, ".gitignore")
-  const entry = "cia-user.jsonc"
 
   if (fs.existsSync(gitignorePath)) {
     const content = fs.readFileSync(gitignorePath, "utf-8")
     const lines = content.split("\n")
-    const hasEntry = lines.some((line) => line.trim() === entry)
-    if (hasEntry) return
-    const toAppend = content.endsWith("\n") ? `${entry}\n` : `\n${entry}\n`
+    const missing = entries.filter((entry) => !lines.some((line) => line.trim() === entry))
+    if (missing.length === 0) return
+    const toAppend = (content.endsWith("\n") ? "" : "\n") + missing.map((e) => `${e}\n`).join("")
     fs.appendFileSync(gitignorePath, toAppend)
   } else {
-    fs.writeFileSync(gitignorePath, `${entry}\n`, "utf-8")
+    fs.writeFileSync(gitignorePath, entries.map((e) => `${e}\n`).join(""), "utf-8")
   }
 }
 
@@ -72,7 +71,7 @@ export async function createProject(): Promise<CiaConfig> {
   const repoConfig = await getRepoConfig(projRoot)
   // Ensure both config files exist
   await setUserBranchPrefix(projRoot, userConfig.branchPrefix)
-  ensureGitignoreHasUserConfig(projRoot)
+  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/"])
   const repoConfigPath = path.join(projRoot, "cia-repo.jsonc")
   if (!fs.existsSync(repoConfigPath)) {
     fs.writeFileSync(
@@ -90,7 +89,7 @@ export async function createProject(): Promise<CiaConfig> {
 export async function setBranchPrefix(prefix: string): Promise<void> {
   const projRoot = projectRoot()
   await setUserBranchPrefix(projRoot, prefix)
-  ensureGitignoreHasUserConfig(projRoot)
+  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/"])
 }
 
 export async function setRunCommand(runCommand: string): Promise<void> {

@@ -100,8 +100,8 @@ export async function createWorktree(branch: string): Promise<string> {
   const dir = branchDirname(root, branch)
   log(`createWorktree: branch=${branch}, root=${root}, dir=${dir}`)
 
-  if (!fs.existsSync(path.join(root, WORKTREES_DIR_NAME))) {
-    fs.mkdirSync(path.join(root, WORKTREES_DIR_NAME), { recursive: true })
+  if (!fs.existsSync(path.join(process.cwd(), WORKTREES_DIR_NAME))) {
+    fs.mkdirSync(path.join(process.cwd(), WORKTREES_DIR_NAME), { recursive: true })
   }
 
   // base from local main

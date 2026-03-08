@@ -12,7 +12,7 @@ import { ConfirmForceDeletePrompt } from "./components/confirm-force-delete-prom
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
-import { Header, RowView } from "./branch-list/view"
+import { Header, RowView, Warnings } from "./branch-list/view"
 import { useTuiInput } from "./actions/use-tui-input"
 import { SlashCommandView, ConfigView } from "./slash-commands/view"
 import { CreateView } from "./create/view"
@@ -217,7 +217,7 @@ const App: React.FC = () => {
         <ConfirmKillPrompt branch={killCandidate} />
       )}
 
-      {mode === "list" && (
+      {mode === "list" && <>
         <Box flexDirection="column" marginTop={1}>
           <Header />
           <Box flexDirection="column">
@@ -229,7 +229,9 @@ const App: React.FC = () => {
               rows.map((r, i) => <RowView key={r.branch} row={r} selected={i === idx} />)}
           </Box>
         </Box>
-      )}
+        <Warnings rows={rows} />
+      </>}
+
 
       <Box marginTop={1}>
         <Text dimColor>{msg || " "}</Text>
