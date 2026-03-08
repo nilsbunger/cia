@@ -77,7 +77,7 @@ export async function createProject(): Promise<CiaConfig> {
   if (!fs.existsSync(repoConfigPath)) {
     fs.writeFileSync(
       repoConfigPath,
-      JSON.stringify({ ...repoConfig } as object, null, 2) + "\n",
+      `${JSON.stringify({ ...repoConfig } as object, null, 2)}\n`,
       "utf-8",
     )
   }

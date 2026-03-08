@@ -72,7 +72,6 @@ const App: React.FC = () => {
   useTuiInput({
     mode,
     rows,
-    idx,
     selected,
     deleteCandidate,
     forceDeleteCandidate,

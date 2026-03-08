@@ -1,10 +1,10 @@
-import React from "react"
+import type React from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
-import { Row } from "../types"
+import type { Row } from "../types"
 
 const Col: React.FC<{ s: number; text: string }> = ({ s, text }) => {
-  const t = text.length > s ? text.slice(0, s - 1) + "…" : text.padEnd(s, " ")
+  const t = text.length > s ? `${text.slice(0, s - 1)}…` : text.padEnd(s, " ")
   return <Text>{t}</Text>
 }
 

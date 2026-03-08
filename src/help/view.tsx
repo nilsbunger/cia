@@ -1,4 +1,4 @@
-import React from "react"
+import type React from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
 import { WORKTREES_DIR_NAME } from "../constants"

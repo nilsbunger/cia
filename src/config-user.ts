@@ -34,7 +34,7 @@ export async function getUserConfig(repoRoot: string): Promise<CiaUserConfig> {
     const prefix =
       typeof data.branchPrefix === "string" ? data.branchPrefix : getDefaultBranchPrefix()
     return {
-      branchPrefix: prefix.endsWith("/") ? prefix : prefix + "/",
+      branchPrefix: prefix.endsWith("/") ? prefix : `${prefix}/`,
     }
   } catch {
     return { branchPrefix: getDefaultBranchPrefix() }
@@ -43,9 +43,9 @@ export async function getUserConfig(repoRoot: string): Promise<CiaUserConfig> {
 
 export async function setBranchPrefix(repoRoot: string, prefix: string): Promise<void> {
   const file = userConfigPath(repoRoot)
-  const normalized = prefix.trim().endsWith("/") ? prefix.trim() : prefix.trim() + "/"
+  const normalized = prefix.trim().endsWith("/") ? prefix.trim() : `${prefix.trim()}/`
   const current = await getUserConfig(repoRoot)
   const config: CiaUserConfig = { ...current, branchPrefix: normalized }
-  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
+  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, "utf-8")
 }
 

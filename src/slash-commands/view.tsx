@@ -1,4 +1,4 @@
-import React from "react"
+import type React from "react"
 import { SlashCommandPrompt } from "../components/slash-command-prompt"
 import { ConfigPrompt } from "../components/config-prompt"
 

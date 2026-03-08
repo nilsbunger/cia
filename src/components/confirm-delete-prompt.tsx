@@ -29,8 +29,8 @@ export const ConfirmDeletePrompt: React.FC<{
             </Text>
           </Box>
           <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {unmergedCommits.slice(0, 5).map((commit, i) => (
-              <Box key={i}>
+            {unmergedCommits.slice(0, 5).map((commit) => (
+              <Box key={commit}>
                 <Text dimColor>{commit}</Text>
               </Box>
             ))}
@@ -50,8 +50,8 @@ export const ConfirmDeletePrompt: React.FC<{
             </Text>
           </Box>
           <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {uncommittedFiles.slice(0, 5).map((file, i) => (
-              <Box key={i}>
+            {uncommittedFiles.slice(0, 5).map((file) => (
+              <Box key={file}>
                 <Text dimColor>{file}</Text>
               </Box>
             ))}
@@ -68,8 +68,8 @@ export const ConfirmDeletePrompt: React.FC<{
             <Text>Worktree has {chalk.bold(worktreeIssues.length)} issue(s):</Text>
           </Box>
           <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {worktreeIssues.map((issue, i) => (
-              <Box key={i}>
+            {worktreeIssues.map((issue) => (
+              <Box key={issue}>
                 <Text dimColor>{issue}</Text>
               </Box>
             ))}

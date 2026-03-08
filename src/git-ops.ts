@@ -1,5 +1,5 @@
 import { execa } from "execa"
-import * as path from "path"
+import * as path from "node:path"
 import { log } from "./utils"
 import * as fs from "node:fs"
 import { branchDirname } from "./fs-ops"

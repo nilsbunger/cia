@@ -6,7 +6,7 @@ import { checkDeleteIssues, checkForConflicts, ensureWorktree } from "../cmd-hel
 import { resolveRunCommand } from "../config"
 import { runService, killService, getRunningService } from "../service"
 import { log } from "../utils"
-import { Mode, Row } from "../types"
+import type { Mode, Row } from "../types"
 
 export type DeleteCandidate = {
   branch: string
@@ -24,7 +24,6 @@ export type OperationCandidate = {
 export type TuiInputContext = {
   mode: Mode
   rows: Row[]
-  idx: number
   selected: Row | undefined
   deleteCandidate: DeleteCandidate | null
   forceDeleteCandidate: string | null
@@ -48,7 +47,6 @@ export function useTuiInput(ctx: TuiInputContext) {
   const {
     mode,
     rows,
-    idx,
     selected,
     deleteCandidate,
     forceDeleteCandidate,
@@ -98,6 +96,7 @@ export function useTuiInput(ctx: TuiInputContext) {
           setMsg(`Deleted ${forceDeleteCandidate}`)
           await refresh()
           setIdx((i) => Math.min(i, Math.max(0, rows.length - 2)))
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           log(`Force delete failed for branch: ${forceDeleteCandidate}`, {
             error: e.message,
@@ -126,6 +125,7 @@ export function useTuiInput(ctx: TuiInputContext) {
           setDeleteCandidate(null)
           await refresh()
           setIdx((i) => Math.min(i, Math.max(0, rows.length - 2)))
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           log(`Force delete failed for branch: ${deleteCandidate.branch}`, {
             error: e.message,
@@ -152,6 +152,7 @@ export function useTuiInput(ctx: TuiInputContext) {
         try {
           await mergeIntoMain(branch)
           setMsg(`Merged ${branch} into main`)
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           const errorMsg = e.shortMessage || e.message
           if (errorMsg.toLowerCase().includes("conflict")) {
@@ -180,6 +181,7 @@ export function useTuiInput(ctx: TuiInputContext) {
         try {
           await syncBranch(branch)
           setMsg(`Synced ${branch}`)
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           const errorMsg = e.shortMessage || e.message
           if (errorMsg.toLowerCase().includes("conflict")) {
@@ -207,6 +209,7 @@ export function useTuiInput(ctx: TuiInputContext) {
         try {
           await killService(repoRoot)
           setMsg(`Service killed`)
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           setMsg(chalk.red(`Kill failed: ${e.shortMessage || e.message}`))
         }
@@ -252,6 +255,7 @@ export function useTuiInput(ctx: TuiInputContext) {
         const dir = await ensureWorktree(selected.branch)
         await runService(repoRoot, selected.branch, dir, resolveRunCommand(runCommand))
         setMsg(`Service started for ${selected.branch} (new terminal)`)
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
         setMsg(chalk.red(`Failed: ${e.shortMessage || e.message}`))
       }
@@ -314,6 +318,7 @@ export function useTuiInput(ctx: TuiInputContext) {
           setMsg(`Synced ${selected.branch}`)
           await refresh()
         }
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
         const errorMsg = e.shortMessage || e.message
         if (errorMsg.toLowerCase().includes("conflict")) {
@@ -331,6 +336,7 @@ export function useTuiInput(ctx: TuiInputContext) {
       try {
         await pushBranch(selected.branch)
         setMsg(`Pushed ${selected.branch} to remote`)
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
         setMsg(chalk.red(`Push failed: ${e.shortMessage || e.message}`))
       }
@@ -357,6 +363,7 @@ export function useTuiInput(ctx: TuiInputContext) {
           setMsg(`Merged ${selected.branch} into main`)
           await refresh()
         }
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
         const errorMsg = e.shortMessage || e.message
         if (errorMsg.toLowerCase().includes("conflict")) {
@@ -397,6 +404,7 @@ export function useTuiInput(ctx: TuiInputContext) {
           setMsg(`Deleted ${selected.branch}`)
           await refresh()
           setIdx((i) => Math.min(i, Math.max(0, rows.length - 2)))
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
           log(`Safe delete failed for branch: ${selected.branch}`, {
             error: e.message,

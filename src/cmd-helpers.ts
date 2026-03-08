@@ -49,7 +49,7 @@ export async function checkDeleteIssues(branch: string): Promise<{
   try {
     // Check commits in branch that are not in main
     log(`checkDeleteIssues: Checking for unmerged commits...`)
-    const { stdout } = await execa("git", ["log", "main.." + branch, "--format=%h %s"], {
+    const { stdout } = await execa("git", [`log`, `main..${branch}`, `--format=%h %s`], {
       cwd: root,
     })
     const unmergedCommits = stdout.trim().split("\n").filter(Boolean)
@@ -91,6 +91,7 @@ export async function checkDeleteIssues(branch: string): Promise<{
             break
           }
         }
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
         log(`checkDeleteIssues: Failed to check worktree lock status`, { error: e.message })
       }

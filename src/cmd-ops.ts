@@ -3,7 +3,7 @@ import { log } from "./utils"
 import { branchDirname, which } from "./fs-ops"
 import { getRepoRoot } from "./git-ops"
 import * as fs from "node:fs"
-import * as path from "path"
+import * as path from "node:path"
 import { WORKTREES_DIR_NAME } from "./constants"
 
 export async function deleteBranchAndWorktree(branch: string, force: boolean = false) {
