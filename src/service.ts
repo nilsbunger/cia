@@ -6,6 +6,14 @@ import { log } from "./utils"
 
 const RUNNING_SERVICE_FILE = "running-service"
 
+/** Detect which terminal the user is running in (best effort). */
+function getPreferredTerminal(): "warp" | "iterm" | "terminal" {
+  const term = process.env.TERM_PROGRAM ?? ""
+  if (term === "WarpTerminal") return "warp"
+  if (term === "iTerm.app") return "iterm"
+  return "terminal"
+}
+
 function runningServicePath(repoRoot: string): string {
   const ciaDir = path.join(repoRoot, ".cia")
   if (!fs.existsSync(ciaDir)) {
@@ -80,7 +88,9 @@ async function runServiceMac(
   if (!fs.existsSync(ciaDir)) fs.mkdirSync(ciaDir, { recursive: true })
   const runningPath = runningServicePath(repoRoot)
   const scriptPath = path.join(ciaDir, "run-service.sh")
+  const windowTitle = `cia (${branch})`
   const script = `#!/bin/bash
+printf '\\033]0;%s\\007' ${JSON.stringify(windowTitle)}
 cd ${JSON.stringify(worktreeDir)}
 printf '%s\\n%d\\n' ${JSON.stringify(branch)} $$ > ${JSON.stringify(runningPath)}
 exec bash -c ${JSON.stringify(runCommand)}
@@ -88,8 +98,22 @@ exec bash -c ${JSON.stringify(runCommand)}
   fs.writeFileSync(scriptPath, script, "utf-8")
   fs.chmodSync(scriptPath, 0o755)
 
-  const osaScript = `tell application "Terminal" to do script "bash " & quoted form of ${JSON.stringify(scriptPath)}`
-  spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
+  const preferred = getPreferredTerminal()
+  try {
+    if (preferred === "warp") {
+      await launchWarp(scriptPath, worktreeDir, windowTitle)
+    } else if (preferred === "iterm") {
+      launchITerm(scriptPath, windowTitle)
+    } else {
+      launchTerminal(scriptPath)
+    }
+  } catch (e) {
+    // Fallback to Terminal.app if preferred terminal fails
+    log(`Preferred terminal (${preferred}) failed, falling back to Terminal`, {
+      error: (e as Error).message,
+    })
+    launchTerminal(scriptPath)
+  }
 
   // Poll for the PID file (script writes it before exec)
   for (let i = 0; i < 50; i++) {
@@ -104,6 +128,37 @@ exec bash -c ${JSON.stringify(runCommand)}
     }
   }
   throw new Error("Failed to start service: PID file not created")
+}
+
+function launchTerminal(scriptPath: string, _windowTitle?: string): void {
+  const osaScript = `tell application "Terminal" to do script "bash " & quoted form of ${JSON.stringify(scriptPath)}`
+  spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
+}
+
+function launchITerm(scriptPath: string, windowTitle: string): void {
+  const osaScript = `tell application "iTerm" to tell (create window with default profile command "bash " & quoted form of ${JSON.stringify(scriptPath)}) to tell current session of current tab to set name to ${JSON.stringify(windowTitle)}`
+  spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
+}
+
+async function launchWarp(scriptPath: string, worktreeDir: string, windowTitle: string): Promise<void> {
+  const warpConfigDir = path.join(os.homedir(), ".warp", "launch_configurations")
+  if (!fs.existsSync(warpConfigDir)) {
+    fs.mkdirSync(warpConfigDir, { recursive: true })
+  }
+  const configPath = path.join(warpConfigDir, "cia-run.yaml")
+  const config = `---
+name: cia-run
+windows:
+  - tabs:
+      - title: ${JSON.stringify(windowTitle)}
+        layout:
+          cwd: ${JSON.stringify(worktreeDir)}
+          commands:
+            - exec: ${JSON.stringify(`bash ${scriptPath}`)}
+`
+  fs.writeFileSync(configPath, config, "utf-8")
+  const url = "warp://launch/cia-run"
+  spawn("open", [url], { detached: true, stdio: "ignore" })
 }
 
 async function runServiceDetached(
