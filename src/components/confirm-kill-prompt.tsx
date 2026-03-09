@@ -3,8 +3,8 @@ import { Box, Text } from "ink"
 import chalk from "chalk"
 
 export const ConfirmKillPrompt: React.FC<{
-  branch: string
-}> = ({ branch }) => (
+  worktree: string
+}> = ({ worktree }) => (
   <Box
     borderStyle="round"
     borderColor="yellow"
@@ -14,7 +14,7 @@ export const ConfirmKillPrompt: React.FC<{
     <Text>{chalk.bold.yellow("Kill running service?")}</Text>
     <Box marginTop={1}>
       <Text>
-        Service is running for branch {chalk.bold(branch)}. Kill it?
+        Service is running for worktree {chalk.bold(worktree)}. Kill it?
       </Text>
     </Box>
     <Box marginTop={1}>

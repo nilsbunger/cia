@@ -19,10 +19,6 @@ function userConfigPath(repoRoot: string): string {
   return path.join(repoRoot, USER_CONFIG_FILE)
 }
 
-export function userConfigFilePath(repoRoot: string): string {
-  return userConfigPath(repoRoot)
-}
-
 export async function getUserConfig(repoRoot: string): Promise<CiaUserConfig> {
   const file = userConfigPath(repoRoot)
   if (!fs.existsSync(file)) {

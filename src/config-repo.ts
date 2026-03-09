@@ -7,14 +7,12 @@ const REPO_CONFIG_FILE = "cia-repo.jsonc"
 export interface CiaRepoConfig {
   /** Command to run the service (e.g. "npm run dev") */
   runCommand?: string
+  /** Directory to run the service in, relative to repo root (e.g. "frontend") */
+  runDir?: string
 }
 
 function repoConfigPath(repoRoot: string): string {
   return path.join(repoRoot, REPO_CONFIG_FILE)
-}
-
-export function repoConfigFilePath(repoRoot: string): string {
-  return repoConfigPath(repoRoot)
 }
 
 export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
@@ -27,6 +25,7 @@ export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
     const data = parse(raw) as Partial<CiaRepoConfig>
     return {
       runCommand: typeof data.runCommand === "string" ? data.runCommand : undefined,
+      runDir: typeof data.runDir === "string" ? data.runDir : undefined,
     }
   } catch {
     return {}
@@ -37,5 +36,12 @@ export async function setRunCommand(repoRoot: string, runCommand: string): Promi
   const file = repoConfigPath(repoRoot)
   const current = await getRepoConfig(repoRoot)
   const config: CiaRepoConfig = { ...current, runCommand: runCommand.trim() || undefined }
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
+}
+
+export async function setRunDir(repoRoot: string, runDir: string): Promise<void> {
+  const file = repoConfigPath(repoRoot)
+  const current = await getRepoConfig(repoRoot)
+  const config: CiaRepoConfig = { ...current, runDir: runDir.trim() || undefined }
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
 }

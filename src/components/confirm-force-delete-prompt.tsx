@@ -3,18 +3,18 @@ import { Box, Text } from "ink"
 import chalk from "chalk"
 
 export const ConfirmForceDeletePrompt: React.FC<{
-  branch: string
-}> = ({ branch }) => (
+  name: string
+}> = ({ name }) => (
   <Box
     borderStyle="round"
     borderColor="red"
     paddingX={1}
     flexDirection="column"
     marginTop={1}>
-    <Text>{chalk.bold.red("Force delete branch?")}</Text>
+    <Text>{chalk.bold.red("Force delete worktree?")}</Text>
     <Box marginTop={1}>
       <Text>
-        Branch {chalk.bold(branch)} will be deleted with worktree and remote backup.
+        Worktree {chalk.bold(name)} will be deleted along with its local branch and remote backup.
       </Text>
     </Box>
     <Box marginTop={1}>

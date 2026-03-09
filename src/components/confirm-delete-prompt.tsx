@@ -1,15 +1,36 @@
 import { Box, Text } from "ink"
 import chalk from "chalk"
+import type { DeleteCandidate } from "../types"
+
+const IssueList: React.FC<{ items: string[]; label: string; maxItems?: number }> = ({
+  items,
+  label,
+  maxItems = 5,
+}) => {
+  if (items.length === 0) return null
+  return (
+    <>
+      <Box marginTop={1}>
+        <Text>{label}</Text>
+      </Box>
+      <Box flexDirection="column" marginTop={1} marginLeft={2}>
+        {items.slice(0, maxItems).map((item) => (
+          <Box key={item}>
+            <Text dimColor>{item}</Text>
+          </Box>
+        ))}
+        {items.length > maxItems && (
+          <Text dimColor>... and {items.length - maxItems} more</Text>
+        )}
+      </Box>
+    </>
+  )
+}
 
 export const ConfirmDeletePrompt: React.FC<{
-  branch: string
-  unmergedCommits: string[]
-  uncommittedFiles: string[]
-  worktreeIssues: string[]
-}> = ({ branch, unmergedCommits, uncommittedFiles, worktreeIssues }) => {
-  const hasUnmergedCommits = unmergedCommits.length > 0
-  const hasUncommittedFiles = uncommittedFiles.length > 0
-  const hasWorktreeIssues = worktreeIssues.length > 0
+  candidate: DeleteCandidate
+}> = ({ candidate }) => {
+  const { name, unmergedCommits, uncommittedFiles, worktreeIssues } = candidate
 
   return (
     <Box
@@ -20,65 +41,21 @@ export const ConfirmDeletePrompt: React.FC<{
       marginTop={1}>
       <Text>{chalk.bold.red("⚠ Warning: Issues detected")}</Text>
 
-      {hasUnmergedCommits && (
-        <>
-          <Box marginTop={1}>
-            <Text>
-              Branch {chalk.bold(branch)} has {chalk.bold(unmergedCommits.length)} unmerged
-              commit(s):
-            </Text>
-          </Box>
-          <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {unmergedCommits.slice(0, 5).map((commit) => (
-              <Box key={commit}>
-                <Text dimColor>{commit}</Text>
-              </Box>
-            ))}
-            {unmergedCommits.length > 5 && (
-              <Text dimColor>... and {unmergedCommits.length - 5} more</Text>
-            )}
-          </Box>
-        </>
-      )}
-
-      {hasUncommittedFiles && (
-        <>
-          <Box marginTop={1}>
-            <Text>
-              Branch {chalk.bold(branch)} has {chalk.bold(uncommittedFiles.length)} uncommitted
-              file(s):
-            </Text>
-          </Box>
-          <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {uncommittedFiles.slice(0, 5).map((file) => (
-              <Box key={file}>
-                <Text dimColor>{file}</Text>
-              </Box>
-            ))}
-            {uncommittedFiles.length > 5 && (
-              <Text dimColor>... and {uncommittedFiles.length - 5} more</Text>
-            )}
-          </Box>
-        </>
-      )}
-
-      {hasWorktreeIssues && (
-        <>
-          <Box marginTop={1}>
-            <Text>Worktree has {chalk.bold(worktreeIssues.length)} issue(s):</Text>
-          </Box>
-          <Box flexDirection="column" marginTop={1} marginLeft={2}>
-            {worktreeIssues.map((issue) => (
-              <Box key={issue}>
-                <Text dimColor>{issue}</Text>
-              </Box>
-            ))}
-          </Box>
-        </>
-      )}
+      <IssueList
+        items={unmergedCommits}
+        label={`Worktree ${chalk.bold(name)} has ${chalk.bold(unmergedCommits.length)} unmerged commit(s):`}
+      />
+      <IssueList
+        items={uncommittedFiles}
+        label={`Worktree ${chalk.bold(name)} has ${chalk.bold(uncommittedFiles.length)} uncommitted file(s):`}
+      />
+      <IssueList
+        items={worktreeIssues}
+        label={`Worktree has ${chalk.bold(worktreeIssues.length)} issue(s):`}
+      />
 
       <Box marginTop={1}>
-        <Text>{chalk.bold("Force delete this branch anyway?")}</Text>
+        <Text>{chalk.bold("Force delete this worktree anyway?")}</Text>
       </Box>
       <Box marginTop={1}>
         <Text dimColor>y to force delete • n or Esc to cancel</Text>

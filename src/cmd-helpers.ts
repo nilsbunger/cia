@@ -1,15 +1,18 @@
 import { execa } from "execa"
 import { branchDirname } from "./fs-ops"
 import { getConfig } from "./config"
-import { getRepoRoot, listWorktrees, validateWorktree } from "./git-ops"
+import { listWorktrees, validateWorktree } from "./git-ops"
+import { getBaseBranch, getRepoRoot } from "./repo"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { createWorktree } from "./cmd-ops"
 import { log } from "./utils"
-import type { Row } from "./types"
+import type { Worktree } from "./types"
+import { WORKTREES_DIR_NAME } from "./constants"
 
 /** Human-readable age; use date only if older than 60 days */
 function formatCommitAge(unixTs: number): string {
+  if (!unixTs) return "—"
   const now = Date.now() / 1000
   const diffSec = now - unixTs
   const days = diffSec / 86400
@@ -27,42 +30,47 @@ function formatCommitAge(unixTs: number): string {
   })
 }
 
-export async function ensureWorktree(branch: string): Promise<string> {
-  const root = await getRepoRoot()
-  const dir = branchDirname(root, branch)
-  if (fs.existsSync(dir)) return await validateWorktree(branch)
-  return await createWorktree(branch)
+export async function ensureWorktree(branchName: string): Promise<string> {
+  const dir = branchDirname(branchName)
+  if (fs.existsSync(dir)) return await validateWorktree(branchName)
+  return await createWorktree(branchName)
 }
 
-export async function checkDeleteIssues(branch: string): Promise<{
+export async function checkDeleteIssues(
+  worktreeDir: string,
+  branch: string | null,
+): Promise<{
   isClean: boolean
   unmergedCommits: string[]
   uncommittedFiles: string[]
   worktreeIssues: string[]
 }> {
-  log(`checkDeleteIssues: Starting check for branch: ${branch}`)
+  log(`checkDeleteIssues: Starting check`, { worktreeDir, branch })
   const root = await getRepoRoot()
-  const dir = branchDirname(root, branch)
-  log(`checkDeleteIssues: root=${root}, dir=${dir}`)
+  log(`checkDeleteIssues: root=${root}, dir=${worktreeDir}`)
   const worktreeIssues: string[] = []
 
   try {
-    // Check commits in branch that are not in main
-    log(`checkDeleteIssues: Checking for unmerged commits...`)
-    const { stdout } = await execa("git", [`log`, `main..${branch}`, `--format=%h %s`], {
-      cwd: root,
-    })
-    const unmergedCommits = stdout.trim().split("\n").filter(Boolean)
-    log(`checkDeleteIssues: Found ${unmergedCommits.length} unmerged commits`)
+    // Check commits in branch that are not in the base branch (only if there is a branch)
+    const baseBranch = await getBaseBranch()
+    let unmergedCommits: string[] = []
+    if (branch) {
+      log(`checkDeleteIssues: Checking for unmerged commits against ${baseBranch}...`)
+      const { stdout } = await execa("git", [`log`, `${baseBranch}..${branch}`, `--format=%h %s`], {
+        cwd: root,
+      })
+      unmergedCommits = stdout.trim().split("\n").filter(Boolean)
+      log(`checkDeleteIssues: Found ${unmergedCommits.length} unmerged commits`)
+    }
 
     // Check for uncommitted changes (staged or unstaged) in the worktree
     let uncommittedFiles: string[] = []
-    const dirExists = fs.existsSync(dir)
+    const dirExists = fs.existsSync(worktreeDir)
     log(`checkDeleteIssues: Worktree exists: ${dirExists}`)
     if (dirExists) {
       // Get status of worktree - both staged and unstaged files
       log(`checkDeleteIssues: Checking git status in worktree...`)
-      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd: dir })
+      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd: worktreeDir })
       uncommittedFiles = statusOut.trim().split("\n").filter(Boolean)
       log(`checkDeleteIssues: Found ${uncommittedFiles.length} uncommitted files`)
 
@@ -74,11 +82,10 @@ export async function checkDeleteIssues(branch: string): Promise<{
           ["worktree", "list", "--porcelain"],
           { cwd: root },
         )
-        // Check if this specific worktree is marked as locked in the output
         const lines = worktreeList.split("\n")
         let foundOurWorktree = false
         for (const line of lines) {
-          if (line.startsWith("worktree ") && line.includes(dir)) {
+          if (line.startsWith("worktree ") && line.includes(worktreeDir)) {
             foundOurWorktree = true
           }
           if (foundOurWorktree && line.startsWith("locked")) {
@@ -86,8 +93,7 @@ export async function checkDeleteIssues(branch: string): Promise<{
             log(`checkDeleteIssues: Worktree is actually locked`)
             break
           }
-          // Reset when we hit the next worktree entry
-          if (foundOurWorktree && line.startsWith("worktree ") && !line.includes(dir)) {
+          if (foundOurWorktree && line.startsWith("worktree ") && !line.includes(worktreeDir)) {
             break
           }
         }
@@ -95,6 +101,8 @@ export async function checkDeleteIssues(branch: string): Promise<{
       } catch (e: any) {
         log(`checkDeleteIssues: Failed to check worktree lock status`, { error: e.message })
       }
+    } else {
+      worktreeIssues.push("Worktree directory is missing (prunable)")
     }
 
     const isClean =
@@ -110,7 +118,6 @@ export async function checkDeleteIssues(branch: string): Promise<{
     return { isClean, unmergedCommits, uncommittedFiles, worktreeIssues }
   // biome-ignore lint/suspicious/noExplicitAny: ok
   } catch (e: any) {
-    // If command fails, assume not clean
     log(`checkDeleteIssues: Exception caught`, {
       message: e.message,
       stderr: e.stderr,
@@ -133,12 +140,13 @@ export async function checkForConflicts(
 
   try {
     // First get the merge base
-    const { stdout: mergeBase } = await execa("git", ["merge-base", "main", branch], { cwd: root })
+    const baseBranch = await getBaseBranch()
+    const { stdout: mergeBase } = await execa("git", ["merge-base", baseBranch, branch], { cwd: root })
     const base = mergeBase.trim()
 
     // Use git merge-tree to simulate the merge and detect conflicts
     // merge-tree shows conflicts without touching the working directory
-    const { stdout } = await execa("git", ["merge-tree", base, "main", branch], { cwd: root })
+    const { stdout } = await execa("git", ["merge-tree", base, baseBranch, branch], { cwd: root })
 
     // If merge-tree output contains conflict markers, there will be conflicts
     const hasConflicts = stdout.includes("<<<<<<<") || stdout.includes("=======")
@@ -159,6 +167,7 @@ export async function checkForConflicts(
 
     log(`checkForConflicts: No conflicts detected`)
     return { hasConflicts: false, conflictingFiles: [] }
+  // biome-ignore lint/suspicious/noExplicitAny: ok in catch
   } catch (e: any) {
     // If merge-tree fails, assume there might be conflicts
     log(`checkForConflicts: Error running merge-tree`, { error: e.message })
@@ -166,23 +175,25 @@ export async function checkForConflicts(
   }
 }
 
-export async function computeRows(): Promise<Row[]> {
+export async function computeWorktrees(): Promise<Worktree[]> {
   const result = await getConfig()
   if (!result.ok) return []
   const { branchPrefix } = result.config
   const root = result.repoRoot
   const worktrees = await listWorktrees(branchPrefix)
-  const { getRunningService } = await import("./service")
-  const running = await getRunningService(root)
-  const rows: Row[] = []
+  const { isServiceRunning, getServiceCrashInfo } = await import("./service")
+  const rows: Worktree[] = []
   for (const wt of worktrees) {
     const dir = wt.dir
-    const branch = wt.branch ?? path.basename(dir)
-    // branch status summary
+    const branch = wt.branch ?? path.relative(path.join(root, WORKTREES_DIR_NAME), dir)
+    // worktree status summary
     let status = ""
+    let ahead: number | undefined
+    let behind: number | undefined
+    let dirtyCount: number | undefined
+    let inProgress: "MERGE" | "REBASE" | undefined
     try {
       // Check for merge/rebase in progress
-      let inProgress = ""
       const mergeHeadPath = `${dir}/.git/MERGE_HEAD`
       const rebaseHeadPath = `${dir}/.git/rebase-merge`
       const rebaseApplyPath = `${dir}/.git/rebase-apply`
@@ -200,7 +211,9 @@ export async function computeRows(): Promise<Row[]> {
           ["rev-list", "--left-right", "--count", `main...${wt.branch}`],
           { cwd: dir },
         )
-        const [ahead, behind] = revListOut.trim().split("\t").map(Number)
+        const parts = revListOut.trim().split("\t").map(Number)
+        ahead = parts[0]
+        behind = parts[1]
         const aheadBehind = ahead || behind ? `↑${ahead}↓${behind}` : ""
         status = inProgress ? `${inProgress} ${aheadBehind}` : aheadBehind
       } else {
@@ -209,20 +222,28 @@ export async function computeRows(): Promise<Row[]> {
 
       // Get dirty files count
       const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd: dir })
-      const dirtyCount = statusOut.trim().split("\n").filter(Boolean).length
+      dirtyCount = statusOut.trim().split("\n").filter(Boolean).length
       const dirty = dirtyCount ? `*${dirtyCount}` : ""
 
       status = [status, dirty].filter(Boolean).join(" ")
     } catch {
       status = ""
     }
+    const running = isServiceRunning(branch)
+    const serviceCrash = running ? undefined : (getServiceCrashInfo(branch) ?? undefined)
     rows.push({
-      branch,
-      hasBranch: wt.branch !== null,
+      name: branch,
+      hasBranch: wt.branch !== null && !wt.prunable,
+      prunable: wt.prunable,
       status,
       worktreeDir: dir,
-      serviceRunning: running?.branch === branch,
+      serviceRunning: running,
+      serviceCrash,
       lastCommitAge: formatCommitAge(wt.lastCommitDate),
+      ahead,
+      behind,
+      dirtyCount,
+      inProgress,
     })
   }
   return rows

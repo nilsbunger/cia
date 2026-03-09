@@ -1,28 +1,18 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { getRepoRoot } from "./repo"
-import { getUserConfig, setBranchPrefix as setUserBranchPrefix } from "./config-user"
-import { getRepoConfig, setRunCommand as setRepoRunCommand } from "./config-repo"
+import { type CiaUserConfig, getUserConfig, setBranchPrefix as setUserBranchPrefix } from "./config-user"
+import { type CiaRepoConfig, getRepoConfig, setRunCommand as setRepoRunCommand, setRunDir as setRepoRunDir } from "./config-repo"
 
-export type { CiaUserConfig } from "./config-user"
-export type { CiaRepoConfig } from "./config-repo"
+type CiaConfig = CiaUserConfig & CiaRepoConfig
 
-export interface CiaConfig {
-  branchPrefix: string
-  runCommand?: string
-}
-
-export type ConfigResult =
+type ConfigResult =
   | { ok: true; config: CiaConfig; repoRoot: string }
   | { ok: false; noProject: true }
 
 /** Project root = directory where the app runs. A project is any directory with cia config files. */
 export function projectRoot(): string {
   return process.cwd()
-}
-
-export function configFilePath(): string {
-  return path.join(projectRoot(), "cia-repo.jsonc")
 }
 
 export async function getConfig(): Promise<ConfigResult> {
@@ -42,6 +32,7 @@ export async function getConfig(): Promise<ConfigResult> {
       config: {
         branchPrefix: userConfig.branchPrefix,
         runCommand: repoConfig.runCommand,
+        runDir: repoConfig.runDir,
       },
       repoRoot,
     }
@@ -71,7 +62,7 @@ export async function createProject(): Promise<CiaConfig> {
   const repoConfig = await getRepoConfig(projRoot)
   // Ensure both config files exist
   await setUserBranchPrefix(projRoot, userConfig.branchPrefix)
-  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/"])
+  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/", ".cia-tmp/"])
   const repoConfigPath = path.join(projRoot, "cia-repo.jsonc")
   if (!fs.existsSync(repoConfigPath)) {
     fs.writeFileSync(
@@ -83,6 +74,7 @@ export async function createProject(): Promise<CiaConfig> {
   return {
     branchPrefix: userConfig.branchPrefix,
     runCommand: repoConfig.runCommand,
+    runDir: repoConfig.runDir,
   }
 }
 
@@ -96,15 +88,7 @@ export async function setRunCommand(runCommand: string): Promise<void> {
   await setRepoRunCommand(projectRoot(), runCommand)
 }
 
-/** Resolve relative paths in the run command from cia project root. */
-export function resolveRunCommand(runCommand: string): string {
-  const cwd = projectRoot()
-  const tokens = runCommand.split(/\s+/)
-  const resolved = tokens.map((token) => {
-    if (token.startsWith(".") || token.startsWith("..") || (token.includes("/") && !path.isAbsolute(token))) {
-      return path.resolve(cwd, token)
-    }
-    return token
-  })
-  return resolved.join(" ")
+export async function setRunDir(runDir: string): Promise<void> {
+  await setRepoRunDir(projectRoot(), runDir)
 }
+

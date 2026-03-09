@@ -1,17 +1,16 @@
 import type React from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
+import type { OperationCandidate } from "../types"
 
 export const ConfirmOperationPrompt: React.FC<{
-  branch: string
-  operation: "merge" | "sync"
-  conflictingFiles: string[]
-}> = ({ branch, operation, conflictingFiles }) => {
-  const operationName = operation === "merge" ? "Merge" : "Sync (rebase)"
+  candidate: OperationCandidate,
+}> = ({ candidate }) => {
+  const operationName = candidate.operation === "merge" ? "Merge" : "Sync (rebase)"
   const operationDesc =
-    operation === "merge"
-      ? `merge ${branch} into main`
-      : `rebase ${branch} onto main`
+    candidate.operation === "merge"
+      ? `merge ${candidate.name} into main`
+      : `rebase ${candidate.name} onto main`
 
   return (
     <Box
@@ -25,18 +24,18 @@ export const ConfirmOperationPrompt: React.FC<{
       <Box marginTop={1}>
         <Text>
           {operationName} will likely cause conflicts in{" "}
-          {chalk.bold(conflictingFiles.length)} file(s):
+          {chalk.bold(candidate.conflictingFiles.length)} file(s):
         </Text>
       </Box>
 
       <Box flexDirection="column" marginTop={1} marginLeft={2}>
-        {conflictingFiles.slice(0, 5).map((file, i) => (
+        {candidate.conflictingFiles.slice(0, 5).map((file, i) => (
           <Box key={file}>
             <Text dimColor>{file}</Text>
           </Box>
         ))}
-        {conflictingFiles.length > 5 && (
-          <Text dimColor>... and {conflictingFiles.length - 5} more</Text>
+        {candidate.conflictingFiles.length > 5 && (
+          <Text dimColor>... and {candidate.conflictingFiles.length - 5} more</Text>
         )}
       </Box>
 

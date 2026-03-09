@@ -14,6 +14,7 @@
         "useImportType": "warn",
         "noUselessElse": "warn",
         "useTemplate": "warn",
+        "noNonNullAssertion": "off",
       },
       "suspicious": {
         "noExplicitAny": "warn",

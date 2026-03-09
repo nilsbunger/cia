@@ -3,14 +3,14 @@ import * as path from "node:path"
 import { log } from "./utils"
 import * as fs from "node:fs"
 import { branchDirname } from "./fs-ops"
-import { getRepoRoot } from "./repo"
+import { getBaseBranch, getRepoRoot } from "./repo"
 
-export { getRepoRoot } from "./repo"
 
-export type Worktree = {
+type Worktree = {
   dir: string
   branch: string | null
   lastCommitDate: number
+  prunable: boolean
 }
 
 export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
@@ -25,7 +25,7 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
     const lines = block.split("\n")
     const dirLine = lines.find((l) => l.startsWith("worktree "))
     const branchLine = lines.find((l) => l.startsWith("branch refs/heads/"))
-    const isDetached = lines.some((l) => l === "detached")
+    const isPrunable = lines.some((l) => l.startsWith("prunable"))
     if (!dirLine) continue
 
     const dir = dirLine.replace("worktree ", "").trim()
@@ -34,13 +34,11 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
     // Skip the main worktree (the repo root itself)
     if (dir === repoRoot) continue
 
-    // Filter: worktree's branch must match prefix, or if detached, the dir path should indicate prefix
+    // Filter: worktree's branch must match prefix
     const matchesPrefix = branch
       ? branch.startsWith(branchPrefix)
       : false
-    if (!matchesPrefix && !isDetached) continue
-    // For detached worktrees, skip if they don't look like they belong to us
-    if (isDetached && !matchesPrefix) continue
+    if (!matchesPrefix) continue
 
     // Get last commit date from HEAD of the worktree
     let lastCommitDate = 0
@@ -56,7 +54,7 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
       // ignore
     }
 
-    worktrees.push({ dir, branch, lastCommitDate })
+    worktrees.push({ dir, branch, lastCommitDate, prunable: isPrunable })
   }
 
   worktrees.sort((a, b) => b.lastCommitDate - a.lastCommitDate)
@@ -70,44 +68,48 @@ export async function mergeIntoMain(branch: string) {
   const dir = await validateWorktree(branch)
   const root = await getRepoRoot()
 
-  // Step 2: Merge main into the agent branch in the worktree
+  const baseBranch = await getBaseBranch()
+
+  // Step 2: Merge base branch into the agent branch in the worktree
   // This is where any conflicts will be resolved
   // Allow fast-forward if possible (cleaner history)
   await execa("git", ["checkout", branch], { cwd: dir })
-  await execa("git", ["merge", "main"], { cwd: dir })
+  await execa("git", ["merge", baseBranch], { cwd: dir })
 
-  // Step 3: Now merge the agent branch into main (guaranteed clean fast-forward)
-  // Switch to main in root repo and merge the agent branch
-  await execa("git", ["checkout", "main"], { cwd: root })
+  // Step 3: Now merge the agent branch into the base branch (guaranteed clean fast-forward)
+  // Switch to base branch in root repo and merge the agent branch
+  await execa("git", ["checkout", baseBranch], { cwd: root })
   await execa("git", ["merge", branch, "--ff-only"], { cwd: root })
 }
 
 export async function pushBranch(branch: string) {
   // Validate worktree exists and is in correct state
   await validateWorktree(branch)
-  await execa("git", ["push", "-u", "origin", branch])
+  const root = await getRepoRoot()
+  await execa("git", ["push", "-u", "origin", branch], { cwd: root })
 }
 
 export async function syncBranch(branch: string) {
   // Validate worktree exists and is in correct state
   const dir = await validateWorktree(branch)
   await execa("git", ["checkout", branch], { cwd: dir })
-  await execa("git", ["rebase", "main"], { cwd: dir })
+  const baseBranch = await getBaseBranch()
+  await execa("git", ["rebase", baseBranch], { cwd: dir })
 }
 
-export async function validateWorktree(branch: string): Promise<string> {
+export async function validateWorktree(branchName: string): Promise<string> {
   const root = await getRepoRoot()
-  const dir = branchDirname(root, branch)
+  const branchDir = branchDirname(branchName)
 
   // Check 1: Directory exists
-  if (!fs.existsSync(dir)) {
-    throw new Error(`Worktree directory does not exist: ${dir}`)
+  if (!fs.existsSync(branchDir)) {
+    throw new Error(`Worktree directory does not exist: ${branchDir}`)
   }
 
   // Check 2: Directory is actually a git worktree (has .git file, not .git directory)
-  const gitPath = path.join(dir, ".git")
+  const gitPath = path.join(branchDir, ".git")
   if (!fs.existsSync(gitPath)) {
-    throw new Error(`Directory is not a git worktree (missing .git file): ${dir}`)
+    throw new Error(`Directory is not a git worktree (missing .git file): ${branchDir}`)
   }
 
   // Check 3: Worktree is registered with git
@@ -115,20 +117,20 @@ export async function validateWorktree(branch: string): Promise<string> {
     cwd: root,
   })
   const worktrees = worktreeList.split("\n\n")
-  const ourWorktree = worktrees.find((wt) => wt.includes(`worktree ${dir}`))
+  const ourWorktree = worktrees.find((wt) => wt.includes(`worktree ${branchDir}`))
   if (!ourWorktree) {
-    throw new Error(`Worktree not registered with git: ${dir}`)
+    throw new Error(`Worktree not registered with git: ${branchDir}`)
   }
 
   // Check 4: Worktree is on the correct branch
   const { stdout: currentBranch } = await execa("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-    cwd: dir,
+    cwd: branchDir,
   })
-  if (currentBranch.trim() !== branch) {
+  if (currentBranch.trim() !== branchName) {
     throw new Error(
-      `Worktree is on wrong branch: expected ${branch}, got ${currentBranch.trim()}`,
+      `Worktree is on wrong branch: expected ${branchName}, got ${currentBranch.trim()}`,
     )
   }
 
-  return dir
+  return branchDir
 }
