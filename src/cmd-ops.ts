@@ -4,7 +4,6 @@ import { branchDirname, which } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { WORKTREES_DIR_NAME } from "./constants"
 import { projectRoot } from "./config"
 
 export async function deleteWorktree(
@@ -116,11 +115,13 @@ export async function openEditor(dir: string) {
 }
 export async function createWorktree(branch: string): Promise<string> {
   const projRoot = projectRoot()
-  const dir = branchDirname(branch)
+  const dir = await branchDirname(branch)
   log(`createWorktree: branch=${branch}, root=${projRoot}, dir=${dir}`)
 
-  if (!fs.existsSync(path.join(process.cwd(), WORKTREES_DIR_NAME))) {
-    fs.mkdirSync(path.join(process.cwd(), WORKTREES_DIR_NAME), { recursive: true })
+  // Ensure the parent worktree directory exists
+  const worktreeParentDir = path.dirname(dir)
+  if (!fs.existsSync(worktreeParentDir)) {
+    fs.mkdirSync(worktreeParentDir, { recursive: true })
   }
 
   // base from the currently checked-out branch in the root worktree

@@ -1,5 +1,5 @@
 dist/
 node_modules/
 .worktrees/
-.cia
-cia-user.jsonc
+.cia/cia-user.jsonc
+.cia-tmp/

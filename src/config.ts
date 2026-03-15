@@ -4,6 +4,8 @@ import { getRepoRoot } from "./repo"
 import { type CiaUserConfig, getUserConfig, setBranchPrefix as setUserBranchPrefix } from "./config-user"
 import { type CiaRepoConfig, getRepoConfig, setRunCommand as setRepoRunCommand, setRunDir as setRepoRunDir } from "./config-repo"
 
+const CIA_DIR = ".cia"
+
 type CiaConfig = CiaUserConfig & CiaRepoConfig
 
 type ConfigResult =
@@ -18,7 +20,8 @@ export function projectRoot(): string {
 export async function getConfig(): Promise<ConfigResult> {
   try {
     const projRoot = projectRoot()
-    const repoConfigPath = path.join(projRoot, "cia-repo.jsonc")
+    const ciaDir = path.join(projRoot, CIA_DIR)
+    const repoConfigPath = path.join(ciaDir, "cia-repo.jsonc")
     if (!fs.existsSync(repoConfigPath)) {
       return { ok: false, noProject: true }
     }
@@ -31,6 +34,7 @@ export async function getConfig(): Promise<ConfigResult> {
       ok: true,
       config: {
         branchPrefix: userConfig.branchPrefix,
+        worktreeDir: userConfig.worktreeDir,
         runCommand: repoConfig.runCommand,
         runDir: repoConfig.runDir,
       },
@@ -58,12 +62,23 @@ function ensureGitignoreEntries(projRoot: string, entries: string[]): void {
 
 export async function createProject(): Promise<CiaConfig> {
   const projRoot = projectRoot()
+  const ciaDir = path.join(projRoot, CIA_DIR)
+
+  // Ensure .cia directory exists
+  if (!fs.existsSync(ciaDir)) {
+    fs.mkdirSync(ciaDir, { recursive: true })
+  }
+
   const userConfig = await getUserConfig(projRoot)
   const repoConfig = await getRepoConfig(projRoot)
+
   // Ensure both config files exist
   await setUserBranchPrefix(projRoot, userConfig.branchPrefix)
-  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/", ".cia-tmp/"])
-  const repoConfigPath = path.join(projRoot, "cia-repo.jsonc")
+
+  // Update gitignore to include .cia directory (which contains user config) and default worktree location
+  ensureGitignoreEntries(projRoot, [".cia/cia-user.jsonc", ".worktrees/", ".cia-tmp/"])
+
+  const repoConfigPath = path.join(ciaDir, "cia-repo.jsonc")
   if (!fs.existsSync(repoConfigPath)) {
     fs.writeFileSync(
       repoConfigPath,
@@ -73,6 +88,7 @@ export async function createProject(): Promise<CiaConfig> {
   }
   return {
     branchPrefix: userConfig.branchPrefix,
+    worktreeDir: userConfig.worktreeDir,
     runCommand: repoConfig.runCommand,
     runDir: repoConfig.runDir,
   }
@@ -81,7 +97,7 @@ export async function createProject(): Promise<CiaConfig> {
 export async function setBranchPrefix(prefix: string): Promise<void> {
   const projRoot = projectRoot()
   await setUserBranchPrefix(projRoot, prefix)
-  ensureGitignoreEntries(projRoot, ["cia-user.jsonc", ".worktrees/"])
+  ensureGitignoreEntries(projRoot, [".cia/cia-user.jsonc", ".worktrees/"])
 }
 
 export async function setRunCommand(runCommand: string): Promise<void> {

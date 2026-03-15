@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { parse } from "jsonc-parser"
 
+const CIA_DIR = ".cia"
 const REPO_CONFIG_FILE = "cia-repo.jsonc"
 
 export interface CiaRepoConfig {
@@ -12,7 +13,7 @@ export interface CiaRepoConfig {
 }
 
 function repoConfigPath(repoRoot: string): string {
-  return path.join(repoRoot, REPO_CONFIG_FILE)
+  return path.join(repoRoot, CIA_DIR, REPO_CONFIG_FILE)
 }
 
 export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
@@ -33,6 +34,10 @@ export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
 }
 
 export async function setRunCommand(repoRoot: string, runCommand: string): Promise<void> {
+  const ciaDir = path.join(repoRoot, CIA_DIR)
+  if (!fs.existsSync(ciaDir)) {
+    fs.mkdirSync(ciaDir, { recursive: true })
+  }
   const file = repoConfigPath(repoRoot)
   const current = await getRepoConfig(repoRoot)
   const config: CiaRepoConfig = { ...current, runCommand: runCommand.trim() || undefined }
@@ -40,6 +45,10 @@ export async function setRunCommand(repoRoot: string, runCommand: string): Promi
 }
 
 export async function setRunDir(repoRoot: string, runDir: string): Promise<void> {
+  const ciaDir = path.join(repoRoot, CIA_DIR)
+  if (!fs.existsSync(ciaDir)) {
+    fs.mkdirSync(ciaDir, { recursive: true })
+  }
   const file = repoConfigPath(repoRoot)
   const current = await getRepoConfig(repoRoot)
   const config: CiaRepoConfig = { ...current, runDir: runDir.trim() || undefined }

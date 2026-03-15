@@ -99,7 +99,7 @@ export async function syncBranch(branch: string) {
 
 export async function validateWorktree(branchName: string): Promise<string> {
   const root = await getRepoRoot()
-  const branchDir = branchDirname(branchName)
+  const branchDir = await branchDirname(branchName)
 
   // Check 1: Directory exists
   if (!fs.existsSync(branchDir)) {

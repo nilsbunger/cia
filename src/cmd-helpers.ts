@@ -8,7 +8,6 @@ import * as path from "node:path"
 import { createWorktree } from "./cmd-ops"
 import { log } from "./utils"
 import type { Worktree } from "./types"
-import { WORKTREES_DIR_NAME } from "./constants"
 
 /** Human-readable age; use date only if older than 60 days */
 function formatCommitAge(unixTs: number): string {
@@ -31,7 +30,7 @@ function formatCommitAge(unixTs: number): string {
 }
 
 export async function ensureWorktree(branchName: string): Promise<string> {
-  const dir = branchDirname(branchName)
+  const dir = await branchDirname(branchName)
   if (fs.existsSync(dir)) return await validateWorktree(branchName)
   return await createWorktree(branchName)
 }
@@ -178,14 +177,14 @@ export async function checkForConflicts(
 export async function computeWorktrees(): Promise<Worktree[]> {
   const result = await getConfig()
   if (!result.ok) return []
-  const { branchPrefix } = result.config
+  const { branchPrefix, worktreeDir } = result.config
   const root = result.repoRoot
   const worktrees = await listWorktrees(branchPrefix)
   const { isServiceRunning, getServiceCrashInfo } = await import("./service")
   const rows: Worktree[] = []
   for (const wt of worktrees) {
     const dir = wt.dir
-    const branch = wt.branch ?? path.relative(path.join(root, WORKTREES_DIR_NAME), dir)
+    const branch = wt.branch ?? path.relative(path.join(root, worktreeDir), dir)
     // worktree status summary
     let status = ""
     let ahead: number | undefined

@@ -1,9 +1,15 @@
 import * as path from "node:path"
-import { WORKTREES_DIR_NAME } from "./constants"
 import { execa } from "execa"
+import { getConfig } from "./config"
 
-export function branchDirname(branch: string): string {
-  return path.join(process.cwd(), WORKTREES_DIR_NAME, branch)
+export async function branchDirname(branch: string): Promise<string> {
+  const result = await getConfig()
+  if (!result.ok) {
+    throw new Error("CIA project not initialized")
+  }
+  const worktreeDir = result.config.worktreeDir
+  const projRoot = process.cwd()
+  return path.join(projRoot, worktreeDir, branch)
 }
 export async function which(cmd: string): Promise<string | null> {
   try {
