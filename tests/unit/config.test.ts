@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as os from "node:os"
-import { getUserConfig, setWorktreeDir, setBranchPrefix } from "../../src/config-user"
+import { getUserConfig, setWorktreeDir, setBranchPrefix, setEditor } from "../../src/config-user"
 import { getRepoConfig, setRunCommand } from "../../src/config-repo"
 
 describe("Config System", () => {
@@ -24,6 +24,11 @@ describe("Config System", () => {
     it("should default to .worktrees for worktree directory", async () => {
       const config = await getUserConfig(tempDir)
       expect(config.worktreeDir).toBe(".worktrees")
+    })
+
+    it("should default editor to 'auto'", async () => {
+      const config = await getUserConfig(tempDir)
+      expect(config.editor).toBe("auto")
     })
 
     it("should default branch prefix to username/", async () => {
@@ -77,6 +82,22 @@ describe("Config System", () => {
       const config = await getUserConfig(tempDir)
       expect(config.branchPrefix).toBe("custom/")
       expect(config.worktreeDir).toBe("../external/")
+    })
+
+    it("should allow setting editor to claude", async () => {
+      await setEditor(tempDir, "claude")
+      const config = await getUserConfig(tempDir)
+      expect(config.editor).toBe("claude")
+    })
+
+    it("should persist editor preference", async () => {
+      await setEditor(tempDir, "cursor")
+      const config1 = await getUserConfig(tempDir)
+      expect(config1.editor).toBe("cursor")
+
+      // Read again to ensure it persists
+      const config2 = await getUserConfig(tempDir)
+      expect(config2.editor).toBe("cursor")
     })
   })
 

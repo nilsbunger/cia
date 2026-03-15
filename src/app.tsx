@@ -40,6 +40,7 @@ export default function App() {
         dispatch({
           type: "loaded-config",
           branchPrefix: r.config.branchPrefix,
+          editor: r.config.editor,
           runCommand: r.config.runCommand ?? "",
           runDir: r.config.runDir ?? "",
           repoRoot: r.repoRoot,

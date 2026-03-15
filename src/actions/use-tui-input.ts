@@ -76,6 +76,7 @@ export function useTuiInput(
       dispatch({
         type: "loaded-config",
         branchPrefix: result.config.branchPrefix,
+        editor: result.config.editor,
         runCommand: result.config.runCommand ?? "",
         runDir: result.config.runDir ?? "",
         repoRoot: result.repoRoot,

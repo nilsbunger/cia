@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { getRepoRoot } from "./repo"
-import { type CiaUserConfig, getUserConfig, setBranchPrefix as setUserBranchPrefix } from "./config-user"
+import { type CiaUserConfig, getUserConfig, setBranchPrefix as setUserBranchPrefix, setEditor as setUserEditor, type EditorType } from "./config-user"
 import { type CiaRepoConfig, getRepoConfig, setRunCommand as setRepoRunCommand, setRunDir as setRepoRunDir } from "./config-repo"
 
 const CIA_DIR = ".cia"
@@ -35,6 +35,7 @@ export async function getConfig(): Promise<ConfigResult> {
       config: {
         branchPrefix: userConfig.branchPrefix,
         worktreeDir: userConfig.worktreeDir,
+        editor: userConfig.editor,
         runCommand: repoConfig.runCommand,
         runDir: repoConfig.runDir,
       },
@@ -89,6 +90,7 @@ export async function createProject(): Promise<CiaConfig> {
   return {
     branchPrefix: userConfig.branchPrefix,
     worktreeDir: userConfig.worktreeDir,
+    editor: userConfig.editor,
     runCommand: repoConfig.runCommand,
     runDir: repoConfig.runDir,
   }
@@ -98,6 +100,10 @@ export async function setBranchPrefix(prefix: string): Promise<void> {
   const projRoot = projectRoot()
   await setUserBranchPrefix(projRoot, prefix)
   ensureGitignoreEntries(projRoot, [".cia/cia-user.jsonc", ".worktrees/"])
+}
+
+export async function setEditor(editor: EditorType): Promise<void> {
+  await setUserEditor(projectRoot(), editor)
 }
 
 export async function setRunCommand(runCommand: string): Promise<void> {

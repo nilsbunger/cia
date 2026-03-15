@@ -5,6 +5,9 @@ import { getBaseBranch, getRepoRoot } from "./repo"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { projectRoot } from "./config"
+import { getUserConfig, type EditorType } from "./config-user"
+import { spawn } from "node:child_process"
+import * as os from "node:os"
 
 export async function deleteWorktree(
   worktreeDir: string,
@@ -101,17 +104,144 @@ export async function deleteWorktree(
 
   log(`deleteWorktree: Deletion completed successfully`, { worktreeDir, branch })
 }
-export async function openEditor(dir: string) {
+/** Detect which terminal the user is running in (best effort). */
+function getPreferredTerminal(): "warp" | "iterm" | "terminal" {
+  const term = process.env.TERM_PROGRAM ?? ""
+  if (term === "WarpTerminal") return "warp"
+  if (term === "iTerm.app") return "iterm"
+  return "terminal"
+}
+
+function launchTerminal(scriptPath: string): void {
+  const osaScript = `tell application "Terminal" to do script "bash " & quoted form of ${JSON.stringify(scriptPath)}`
+  spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
+}
+
+function launchITerm(scriptPath: string, windowTitle: string): void {
+  const osaScript = `tell application "iTerm" to tell (create window with default profile command "bash " & quoted form of ${JSON.stringify(scriptPath)}) to tell current session of current tab to set name to ${JSON.stringify(windowTitle)}`
+  spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
+}
+
+async function launchWarp(scriptPath: string, worktreeDir: string, windowTitle: string): Promise<void> {
+  const warpConfigDir = path.join(os.homedir(), ".warp", "launch_configurations")
+  if (!fs.existsSync(warpConfigDir)) {
+    fs.mkdirSync(warpConfigDir, { recursive: true })
+  }
+  const configPath = path.join(warpConfigDir, "cia-editor.yaml")
+  const config = `---
+name: cia-editor
+windows:
+  - tabs:
+      - title: ${JSON.stringify(windowTitle)}
+        layout:
+          cwd: ${JSON.stringify(worktreeDir)}
+          commands:
+            - exec: ${JSON.stringify(`exec bash ${scriptPath}`)}
+`
+  fs.writeFileSync(configPath, config, "utf-8")
+  const url = "warp://launch/cia-editor"
+  spawn("open", [url], { detached: true, stdio: "ignore" })
+}
+
+async function openClaudeCode(dir: string, worktreeName: string, claudeCmd: string): Promise<void> {
+  const scriptPath = path.join(projectRoot(), ".cia-tmp", "open-claude-code.sh")
+  const windowTitle = `WT ${worktreeName}`
+
+  // Create a script that launches Claude Code in the directory
+  const script = `#!/bin/bash
+# CIA editor launcher for worktree: ${worktreeName}
+
+# Set terminal window title
+echo -ne "\\033]0;${windowTitle}\\007"
+
+# Change to the worktree directory
+cd ${JSON.stringify(dir)} || { echo "ERROR: failed to cd to worktree dir"; exit 1; }
+
+# Launch Claude Code
+echo "Launching Claude Code in ${JSON.stringify(dir)}..."
+${claudeCmd}
+`
+
+  // Ensure .cia-tmp directory exists`
+  const ciaTmpDir = path.join(projectRoot(), ".cia-tmp")
+  if (!fs.existsSync(ciaTmpDir)) {
+    fs.mkdirSync(ciaTmpDir, { recursive: true })
+  }
+
+  fs.writeFileSync(scriptPath, script, "utf-8")
+  fs.chmodSync(scriptPath, 0o755)
+
+  const preferred = getPreferredTerminal()
+  try {
+    if (preferred === "warp") {
+      await launchWarp(scriptPath, dir, windowTitle)
+    } else if (preferred === "iterm") {
+      launchITerm(scriptPath, windowTitle)
+    } else {
+      launchTerminal(scriptPath)
+    }
+  } catch (e) {
+    // Fallback to Terminal.app if preferred terminal fails
+    log(`Preferred terminal (${preferred}) failed, falling back to Terminal`, {
+      error: (e as Error).message,
+    })
+    launchTerminal(scriptPath)
+  }
+}
+
+async function autoDetectEditor(): Promise<EditorType> {
   const cursor = await which("cursor")
+  if (cursor) return "cursor"
   const code = await which("code")
-  if (cursor) return execa(cursor, ["-n", dir], { stdio: "inherit" })
-  if (code) return execa(code, ["-n", dir], { stdio: "inherit" })
-  // fallback: open with default OS opener
-  return execa(
-    process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open",
-    process.platform === "win32" ? ["/C", "start", "", dir] : [dir],
-    { stdio: "inherit" },
-  )
+  if (code) return "vscode"
+  const claude = await which("claude")
+  if (claude) return "claude"
+  log("No editor found in autodetection.")
+  return "auto"
+}
+
+export async function openEditor(dir: string, branchName?: string) {
+  const root = await getRepoRoot()
+  const userConfig = await getUserConfig(root)
+  let editorType = userConfig.editor
+
+  log(`openEditor: Opening directory ${dir} with editor type: ${editorType}`)
+
+  // If auto, detect what's available
+  if (editorType === "auto") {
+    editorType = await autoDetectEditor()
+    log(`openEditor: Auto-detected editor type: ${editorType}`)
+  }
+
+  // Use full branch name if provided, otherwise fall back to directory basename
+  const worktreeName = branchName ?? path.basename(dir)
+
+  if (editorType === "cursor") {
+    const cursor = await which("cursor")
+    if (cursor) {
+      log(`openEditor: Launching Cursor at ${dir}`)
+      return execa(cursor, ["-n", dir], { stdio: "inherit" })
+    }
+    log("Cursor not found, falling back to VS Code")
+  } else if (editorType === "vscode") {
+    const code = await which("code")
+    if (code) {
+      log(`openEditor: Launching VS Code at ${dir}`)
+      return execa(code, ["-n", dir], { stdio: "inherit" })
+    }
+    log("VS Code not found, falling back to Claude Code")
+  } else if (editorType === "claude") {
+    const claude = await which("claude")
+    if (claude) {
+      log(`openEditor: Launching Claude Code at ${dir}`)
+      return openClaudeCode(dir, worktreeName, claude)
+    }
+    log("Claude Code not found")
+  }
+
+  // No editor found
+  log(`openEditor: No editor found. Please install Cursor, VS Code, or Claude Code.`)
+  throw new Error("No editor found. Please install Cursor, VS Code, or Claude Code, or configure editor in .cia/cia-user.jsonc")
 }
 export async function createWorktree(branch: string): Promise<string> {
   const projRoot = projectRoot()

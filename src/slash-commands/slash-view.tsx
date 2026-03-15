@@ -2,7 +2,7 @@ import type React from "react"
 import chalk from "chalk"
 import { SlashCommandPrompt } from "./slash-command-prompt"
 import { ConfigPrompt } from "./config-prompt"
-import { setBranchPrefix, setRunCommand, setRunDir, getConfig } from "../config"
+import { setBranchPrefix, setEditor, setRunCommand, setRunDir, getConfig } from "../config"
 import type { Action, AppState } from "../app-state-reducer"
 
 export const SlashCommandView: React.FC<{
@@ -24,24 +24,27 @@ export const ConfigView: React.FC<{
   dispatch: React.Dispatch<Action>
   refresh: () => Promise<void>
 }> = ({ state, dispatch, refresh }) => {
-  const { branchPrefix, runCommand, runDir, repoRoot } = state
+  const { branchPrefix, editor, runCommand, runDir, repoRoot } = state
 
   return (
     <ConfigPrompt
       currentPrefix={branchPrefix}
+      currentEditor={editor}
       currentRunCommand={runCommand}
       currentRunDir={runDir}
-      onSubmit={async (prefix, cmd, dir) => {
+      onSubmit={async (prefix, editorType, cmd, dir) => {
         await setBranchPrefix(prefix)
+        await setEditor(editorType)
         await setRunCommand(cmd)
         await setRunDir(dir)
         const result = await getConfig()
         const config = result.ok
           ? result.config
-          : { branchPrefix, runCommand, runDir }
+          : { branchPrefix, editor, runCommand, runDir }
         dispatch({
           type: "loaded-config",
           branchPrefix: config.branchPrefix,
+          editor: config.editor,
           runCommand: config.runCommand ?? "",
           runDir: config.runDir ?? "",
           repoRoot,

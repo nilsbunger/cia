@@ -1,8 +1,10 @@
 import { BRANCH_PREFIX } from "./constants"
 import type { Dialog, Worktree } from "./types"
+import type { EditorType } from "./config-user"
 
 export type AppState = {
   branchPrefix: string
+  editor: EditorType
   runCommand: string
   runDir: string
   repoRoot: string
@@ -14,7 +16,7 @@ export type AppState = {
 }
 
 export type Action =
-  | { type: "loaded-config"; branchPrefix: string; runCommand: string; runDir: string; repoRoot: string }
+  | { type: "loaded-config"; branchPrefix: string; editor: EditorType; runCommand: string; runDir: string; repoRoot: string }
   | { type: "refresh-done"; rows: Worktree[] }
   | { type: "set-msg"; msg: string }
   | { type: "move"; dir: "up" | "down" }
@@ -24,6 +26,7 @@ export type Action =
 
 export const initialState: AppState = {
   branchPrefix: BRANCH_PREFIX,
+  editor: "auto",
   runCommand: "",
   runDir: "",
   repoRoot: "",
@@ -40,6 +43,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         branchPrefix: action.branchPrefix,
+        editor: action.editor,
         runCommand: action.runCommand,
         runDir: action.runDir,
         repoRoot: action.repoRoot,

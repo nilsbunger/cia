@@ -3,8 +3,9 @@ import { useState } from "react"
 import { Box, Text, useInput } from "ink"
 import TextInput from "ink-text-input"
 import chalk from "chalk"
+import type { EditorType } from "../config-user"
 
-const FIELDS = ["prefix", "runCommand", "runDir"] as const
+const FIELDS = ["prefix", "editor", "runCommand", "runDir"] as const
 type Field = (typeof FIELDS)[number]
 
 function nextField(f: Field): Field {
@@ -19,12 +20,14 @@ function prevField(f: Field): Field {
 
 export const ConfigPrompt: React.FC<{
   currentPrefix: string
+  currentEditor: EditorType
   currentRunCommand: string
   currentRunDir: string
-  onSubmit: (prefix: string, runCommand: string, runDir: string) => void | Promise<void>
+  onSubmit: (prefix: string, editor: EditorType, runCommand: string, runDir: string) => void | Promise<void>
   onCancel: () => void
-}> = ({ currentPrefix, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
+}> = ({ currentPrefix, currentEditor, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
   const [prefix, setPrefix] = useState<string>(currentPrefix)
+  const [editor, setEditor] = useState<EditorType>(currentEditor)
   const [runCommand, setRunCommand] = useState<string>(currentRunCommand)
   const [runDir, setRunDir] = useState<string>(currentRunDir)
   const [activeField, setActiveField] = useState<Field>("prefix")
@@ -52,12 +55,29 @@ export const ConfigPrompt: React.FC<{
               onChange={setPrefix}
               onSubmit={(v) => {
                 setPrefix(v.trim())
-                setActiveField("runCommand")
+                setActiveField("editor")
               }}
               placeholder="e.g. nils/ or agent/"
             />
           ) : (
             <Text>{prefix || "(none)"}</Text>
+          )}
+        </Box>
+        <Box marginTop={1}>
+          <Text dimColor>Editor: </Text>
+          {activeField === "editor" ? (
+            <TextInput
+              value={editor}
+              onChange={(v) => setEditor(v as EditorType)}
+              onSubmit={(v) => {
+                const normalized = v.trim() as EditorType
+                setEditor(normalized)
+                setActiveField("runCommand")
+              }}
+              placeholder="auto, cursor, vscode, or claude"
+            />
+          ) : (
+            <Text>{editor}</Text>
           )}
         </Box>
         <Box marginTop={1}>
@@ -82,7 +102,7 @@ export const ConfigPrompt: React.FC<{
             <TextInput
               value={runDir}
               onChange={setRunDir}
-              onSubmit={(v) => onSubmit(prefix.trim(), runCommand.trim(), v.trim())}
+              onSubmit={(v) => onSubmit(prefix.trim(), editor, runCommand.trim(), v.trim())}
               placeholder="e.g. frontend (blank = repo root)"
             />
           ) : (

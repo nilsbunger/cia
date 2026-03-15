@@ -19,7 +19,7 @@ export async function executeWorktreeCommand(
   if (commandKey === "c") {
     dispatch({ type: "set-msg", msg: `Opening ${wt.name}…` })
     const dir = await ensureWorktree(wt.name)
-    await openEditor(dir)
+    await openEditor(dir, wt.name)
     dispatch({ type: "set-msg", msg: `Opened ${wt.name}` })
     return
   }
