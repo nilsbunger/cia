@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import path from "node:path"
-import { render } from "ink"
 import { execaSync } from "execa"
-import { log } from "./utils"
+import { render } from "ink"
 import App from "./app"
+import { log } from "./utils"
 
 // When invoked via `pnpm --dir`, cwd is the package dir, not the caller's.
 // pnpm sets INIT_CWD to the original invoking directory.

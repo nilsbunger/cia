@@ -1,13 +1,13 @@
+import { spawn } from "node:child_process"
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
 import { execa } from "execa"
-import { log } from "./utils"
+import { ciaTempDir, projectRoot } from "./config"
+import { type EditorType, getUserConfig } from "./config-user"
 import { branchDirname, which } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
-import * as fs from "node:fs"
-import * as path from "node:path"
-import { projectRoot } from "./config"
-import { getUserConfig, type EditorType } from "./config-user"
-import { spawn } from "node:child_process"
-import * as os from "node:os"
+import { log } from "./utils"
 
 export async function deleteWorktree(
   worktreeDir: string,
@@ -34,7 +34,7 @@ export async function deleteWorktree(
         stdout: result.stdout,
         stderr: result.stderr,
       })
-    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
     } catch (e: any) {
       const stderr = e.stderr || e.message
       log(`deleteWorktree: Worktree removal failed`, {
@@ -78,7 +78,7 @@ export async function deleteWorktree(
       try {
         await execa("git", ["worktree", "add", worktreeDir, branch], { cwd: root })
         log(`deleteWorktree: Worktree restored successfully`)
-      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (restoreErr: any) {
         log(`deleteWorktree: Failed to restore worktree`, { error: restoreErr.message })
       }
@@ -122,7 +122,11 @@ function launchITerm(scriptPath: string, windowTitle: string): void {
   spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
 }
 
-async function launchWarp(scriptPath: string, worktreeDir: string, windowTitle: string): Promise<void> {
+async function launchWarp(
+  scriptPath: string,
+  worktreeDir: string,
+  windowTitle: string,
+): Promise<void> {
   const warpConfigDir = path.join(os.homedir(), ".warp", "launch_configurations")
   if (!fs.existsSync(warpConfigDir)) {
     fs.mkdirSync(warpConfigDir, { recursive: true })
@@ -144,7 +148,7 @@ windows:
 }
 
 async function openClaudeCode(dir: string, worktreeName: string, claudeCmd: string): Promise<void> {
-  const scriptPath = path.join(projectRoot(), ".cia-tmp", "open-claude-code.sh")
+  const scriptPath = path.join(ciaTempDir, "open-claude-code.sh")
   const windowTitle = `WT ${worktreeName}`
 
   // Create a script that launches Claude Code in the directory
@@ -161,12 +165,6 @@ cd ${JSON.stringify(dir)} || { echo "ERROR: failed to cd to worktree dir"; exit 
 echo "Launching Claude Code in ${JSON.stringify(dir)}..."
 ${claudeCmd}
 `
-
-  // Ensure .cia-tmp directory exists`
-  const ciaTmpDir = path.join(projectRoot(), ".cia-tmp")
-  if (!fs.existsSync(ciaTmpDir)) {
-    fs.mkdirSync(ciaTmpDir, { recursive: true })
-  }
 
   fs.writeFileSync(scriptPath, script, "utf-8")
   fs.chmodSync(scriptPath, 0o755)
@@ -241,12 +239,13 @@ export async function openEditor(dir: string, branchName?: string) {
 
   // No editor found
   log(`openEditor: No editor found. Please install Cursor, VS Code, or Claude Code.`)
-  throw new Error("No editor found. Please install Cursor, VS Code, or Claude Code, or configure editor in .cia/cia-user.jsonc")
+  throw new Error(
+    "No editor found. Please install Cursor, VS Code, or Claude Code, or configure editor in .cia/cia-user.jsonc",
+  )
 }
 export async function createWorktree(branch: string): Promise<string> {
-  const projRoot = projectRoot()
   const dir = await branchDirname(branch)
-  log(`createWorktree: branch=${branch}, root=${projRoot}, dir=${dir}`)
+  log(`createWorktree: branch=${branch}, root=${projectRoot}, dir=${dir}`)
 
   // Ensure the parent worktree directory exists
   const worktreeParentDir = path.dirname(dir)
@@ -257,7 +256,7 @@ export async function createWorktree(branch: string): Promise<string> {
   // base from the currently checked-out branch in the root worktree
   const baseBranch = await getBaseBranch()
   log(`createWorktree: Creating new worktree for ${branch} from ${baseBranch}`)
-  await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: projRoot })
+  await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: projectRoot })
   log(`createWorktree: Worktree created successfully`)
 
   return dir

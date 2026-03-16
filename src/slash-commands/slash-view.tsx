@@ -1,9 +1,9 @@
-import type React from "react"
 import chalk from "chalk"
-import { SlashCommandPrompt } from "./slash-command-prompt"
-import { ConfigPrompt } from "./config-prompt"
-import { setBranchPrefix, setEditor, setRunCommand, setRunDir, getConfig } from "../config"
+import type React from "react"
 import type { Action, AppState } from "../app-state-reducer"
+import { getConfig, setBranchPrefix, setEditor, setRunCommand, setRunDir } from "../config"
+import { ConfigPrompt } from "./config-prompt"
+import { SlashCommandPrompt } from "./slash-command-prompt"
 
 export const SlashCommandView: React.FC<{
   dispatch: React.Dispatch<Action>
@@ -38,9 +38,7 @@ export const ConfigView: React.FC<{
         await setRunCommand(cmd)
         await setRunDir(dir)
         const result = await getConfig()
-        const config = result.ok
-          ? result.config
-          : { branchPrefix, editor, runCommand, runDir }
+        const config = result.ok ? result.config : { branchPrefix, editor, runCommand, runDir }
         dispatch({
           type: "loaded-config",
           branchPrefix: config.branchPrefix,

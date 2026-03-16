@@ -21,6 +21,12 @@ export type Worktree = {
   dirtyCount?: number
   /** Merge or rebase in progress */
   inProgress?: "MERGE" | "REBASE"
+  /** Pull request number if one exists */
+  prNumber?: number
+  /** Pull request URL */
+  prUrl?: string
+  /** Pull request state (open, closed, merged) */
+  prState?: "open" | "closed" | "merged"
 }
 
 export type DeleteCandidate = {
@@ -56,6 +62,7 @@ export const WORKTREE_COMMANDS: WorktreeCommand[] = [
   { key: "x", label: "Kill", description: "Stop running service" },
   { key: "s", label: "Sync", description: "Rebase onto main" },
   { key: "p", label: "Push", description: "Backup to remote" },
+  { key: "g", label: "PR", description: "Create GitHub pull request" },
   { key: "m", label: "Merge", description: "Merge into main" },
   { key: "d", label: "Delete", description: "Delete worktree + branch" },
   { key: "D", label: "Force Delete", description: "Force delete worktree + branch (skip checks)" },

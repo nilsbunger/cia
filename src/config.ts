@@ -1,8 +1,19 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import {
+  type CiaRepoConfig,
+  getRepoConfig,
+  setRunCommand as setRepoRunCommand,
+  setRunDir as setRepoRunDir,
+} from "./config-repo"
+import {
+  type CiaUserConfig,
+  type EditorType,
+  getUserConfig,
+  setBranchPrefix as setUserBranchPrefix,
+  setEditor as setUserEditor,
+} from "./config-user"
 import { getRepoRoot } from "./repo"
-import { type CiaUserConfig, getUserConfig, setBranchPrefix as setUserBranchPrefix, setEditor as setUserEditor, type EditorType } from "./config-user"
-import { type CiaRepoConfig, getRepoConfig, setRunCommand as setRepoRunCommand, setRunDir as setRepoRunDir } from "./config-repo"
 
 const CIA_DIR = ".cia"
 
@@ -13,22 +24,26 @@ type ConfigResult =
   | { ok: false; noProject: true }
 
 /** Project root = directory where the app runs. A project is any directory with cia config files. */
-export function projectRoot(): string {
-  return process.cwd()
-}
+export const projectRoot = process.cwd()
+
+export const ciaDir = path.join(projectRoot, CIA_DIR)
+
+export const ciaTempDir = path.join(ciaDir, "tmp")
 
 export async function getConfig(): Promise<ConfigResult> {
+  if (!fs.existsSync(ciaTempDir)) {
+    fs.mkdirSync(ciaTempDir, { recursive: true })
+  }
+
   try {
-    const projRoot = projectRoot()
-    const ciaDir = path.join(projRoot, CIA_DIR)
     const repoConfigPath = path.join(ciaDir, "cia-repo.jsonc")
     if (!fs.existsSync(repoConfigPath)) {
       return { ok: false, noProject: true }
     }
     const repoRoot = await getRepoRoot()
     const [userConfig, repoConfig] = await Promise.all([
-      getUserConfig(projRoot),
-      getRepoConfig(projRoot),
+      getUserConfig(projectRoot),
+      getRepoConfig(projectRoot),
     ])
     return {
       ok: true,
@@ -46,38 +61,17 @@ export async function getConfig(): Promise<ConfigResult> {
   }
 }
 
-function ensureGitignoreEntries(projRoot: string, entries: string[]): void {
-  const gitignorePath = path.join(projRoot, ".gitignore")
-
-  if (fs.existsSync(gitignorePath)) {
-    const content = fs.readFileSync(gitignorePath, "utf-8")
-    const lines = content.split("\n")
-    const missing = entries.filter((entry) => !lines.some((line) => line.trim() === entry))
-    if (missing.length === 0) return
-    const toAppend = (content.endsWith("\n") ? "" : "\n") + missing.map((e) => `${e}\n`).join("")
-    fs.appendFileSync(gitignorePath, toAppend)
-  } else {
-    fs.writeFileSync(gitignorePath, entries.map((e) => `${e}\n`).join(""), "utf-8")
-  }
-}
-
 export async function createProject(): Promise<CiaConfig> {
-  const projRoot = projectRoot()
-  const ciaDir = path.join(projRoot, CIA_DIR)
-
   // Ensure .cia directory exists
   if (!fs.existsSync(ciaDir)) {
     fs.mkdirSync(ciaDir, { recursive: true })
   }
 
-  const userConfig = await getUserConfig(projRoot)
-  const repoConfig = await getRepoConfig(projRoot)
+  const userConfig = await getUserConfig(projectRoot)
+  const repoConfig = await getRepoConfig(projectRoot)
 
   // Ensure both config files exist
-  await setUserBranchPrefix(projRoot, userConfig.branchPrefix)
-
-  // Update gitignore to include .cia directory (which contains user config) and default worktree location
-  ensureGitignoreEntries(projRoot, [".cia/cia-user.jsonc", ".worktrees/", ".cia-tmp/"])
+  await setUserBranchPrefix(projectRoot, userConfig.branchPrefix)
 
   const repoConfigPath = path.join(ciaDir, "cia-repo.jsonc")
   if (!fs.existsSync(repoConfigPath)) {
@@ -97,20 +91,17 @@ export async function createProject(): Promise<CiaConfig> {
 }
 
 export async function setBranchPrefix(prefix: string): Promise<void> {
-  const projRoot = projectRoot()
-  await setUserBranchPrefix(projRoot, prefix)
-  ensureGitignoreEntries(projRoot, [".cia/cia-user.jsonc", ".worktrees/"])
+  await setUserBranchPrefix(projectRoot, prefix)
 }
 
 export async function setEditor(editor: EditorType): Promise<void> {
-  await setUserEditor(projectRoot(), editor)
+  await setUserEditor(projectRoot, editor)
 }
 
 export async function setRunCommand(runCommand: string): Promise<void> {
-  await setRepoRunCommand(projectRoot(), runCommand)
+  await setRepoRunCommand(projectRoot, runCommand)
 }
 
 export async function setRunDir(runDir: string): Promise<void> {
-  await setRepoRunDir(projectRoot(), runDir)
+  await setRepoRunDir(projectRoot, runDir)
 }
-

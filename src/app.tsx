@@ -1,25 +1,25 @@
+import chalk from "chalk"
+import { Box, Text, useApp } from "ink"
 import type React from "react"
 import { useCallback, useEffect, useReducer } from "react"
-import { Box, Text, useApp } from "ink"
-import chalk from "chalk"
+import { useTuiInput } from "./actions/use-tui-input"
+import type { Action, AppState } from "./app-state-reducer"
+import { appReducer, initialState } from "./app-state-reducer"
 import { computeWorktrees } from "./cmd-helpers"
-import { getConfig } from "./config"
-import { LOG_FILE } from "./utils"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
 import { ConfirmForceDeletePrompt } from "./components/confirm-force-delete-prompt"
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
-import { WorktreeListView } from "./worktree-list/view"
-import { WorktreeDetailView } from "./worktree-list/detail-view"
-import { useTuiInput } from "./actions/use-tui-input"
-import { SlashCommandView, ConfigView } from "./slash-commands/slash-view"
+import { getConfig } from "./config"
 import { CreateView } from "./create/create-view"
 import { HelpView } from "./help/view"
-import { useInterval } from "./hooks/use-interval"
 import { useIdleSleep } from "./hooks/use-idle-sleep"
-import { appReducer, initialState } from "./app-state-reducer"
-import type { AppState, Action } from "./app-state-reducer"
+import { useInterval } from "./hooks/use-interval"
+import { ConfigView, SlashCommandView } from "./slash-commands/slash-view"
+import { LOG_FILE } from "./utils"
+import { WorktreeDetailView } from "./worktree-list/detail-view"
+import { WorktreeListView } from "./worktree-list/view"
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -52,7 +52,6 @@ export default function App() {
     })
   }, [refresh])
 
-
   if (sleeping) {
     return <SleepingView />
   }
@@ -63,7 +62,13 @@ export default function App() {
 const SleepingView = () => {
   return (
     <Box flexDirection="column" alignItems="center" justifyContent="center" marginTop={2}>
-      <Text>{chalk.dim("z")}{chalk.dim("z")}{chalk.dim("z")}  {chalk.bold.dim("Sleeping")}  {chalk.dim("z")}{chalk.dim("z")}{chalk.dim("z")}</Text>
+      <Text>
+        {chalk.dim("z")}
+        {chalk.dim("z")}
+        {chalk.dim("z")} {chalk.bold.dim("Sleeping")} {chalk.dim("z")}
+        {chalk.dim("z")}
+        {chalk.dim("z")}
+      </Text>
       <Text> </Text>
       <Text dimColor>Idle for 5 minutes — refresh paused.</Text>
       <Text dimColor>Press any key to wake up.</Text>
@@ -71,7 +76,12 @@ const SleepingView = () => {
   )
 }
 
-const ActiveView = ({ state, dispatch, refresh, exit }: {
+const ActiveView = ({
+  state,
+  dispatch,
+  refresh,
+  exit,
+}: {
   state: AppState
   dispatch: React.Dispatch<Action>
   refresh: () => Promise<void>
@@ -107,7 +117,15 @@ const ActiveView = ({ state, dispatch, refresh, exit }: {
       case "confirm-kill-service":
         return <ConfirmKillPrompt worktree={dialog.worktree} />
       case "worktree-detail":
-        return <WorktreeDetailView worktree={dialog.worktree} state={state} dispatch={dispatch} refresh={refresh} exit={exit} />
+        return (
+          <WorktreeDetailView
+            worktree={dialog.worktree}
+            state={state}
+            dispatch={dispatch}
+            refresh={refresh}
+            exit={exit}
+          />
+        )
       case "list":
         return <WorktreeListView state={state} />
       default:
@@ -145,4 +163,3 @@ const ActiveView = ({ state, dispatch, refresh, exit }: {
     </Box>
   )
 }
-

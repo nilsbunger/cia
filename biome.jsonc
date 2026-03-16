@@ -14,16 +14,16 @@
         "useImportType": "warn",
         "noUselessElse": "warn",
         "useTemplate": "warn",
-        "noNonNullAssertion": "off",
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "warn"
       }
     }
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab",
+    "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100
   },

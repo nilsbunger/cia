@@ -1,12 +1,12 @@
-import { useInput } from "ink"
 import chalk from "chalk"
-import { killService } from "../service"
-import { log } from "../utils"
-import type { AppState, Action } from "../app-state-reducer"
-import type { OperationCandidate } from "../types"
-import { createProject, getConfig } from "../config"
+import { useInput } from "ink"
+import type { Action, AppState } from "../app-state-reducer"
 import { deleteWorktree } from "../cmd-ops"
+import { createProject, getConfig } from "../config"
 import { mergeIntoMain, syncBranch } from "../git-ops"
+import { killService } from "../service"
+import type { OperationCandidate } from "../types"
+import { log } from "../utils"
 
 async function handleDeleteConfirm(
   candidate: { name: string; worktreeDir: string; hasBranch: boolean },
@@ -22,7 +22,7 @@ async function handleDeleteConfirm(
     dispatch({ type: "set-msg", msg: `Deleted ${name}` })
     await refresh()
     dispatch({ type: "clamp-idx" })
-  // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
   } catch (e: any) {
     log(`Delete failed for worktree: ${name}`, {
       error: e.message,
@@ -40,21 +40,32 @@ async function handleOperationConfirm(
   const { name, operation } = candidate
   const isMerge = operation === "merge"
   log(`User confirmed ${operation} for worktree: ${name}`)
-  dispatch({ type: "dismiss", msg: `${isMerge ? "Merging" : "Syncing"} ${name}${isMerge ? " -> main" : ""}…` })
+  dispatch({
+    type: "dismiss",
+    msg: `${isMerge ? "Merging" : "Syncing"} ${name}${isMerge ? " -> main" : ""}…`,
+  })
   try {
     if (isMerge) await mergeIntoMain(name)
     else await syncBranch(name)
-    dispatch({ type: "set-msg", msg: `${isMerge ? "Merged" : "Synced"} ${name}${isMerge ? " into main" : ""}` })
-  // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    dispatch({
+      type: "set-msg",
+      msg: `${isMerge ? "Merged" : "Synced"} ${name}${isMerge ? " into main" : ""}`,
+    })
+    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
   } catch (e: any) {
     const errorMsg = e.shortMessage || e.message
     if (errorMsg.toLowerCase().includes("conflict")) {
       dispatch({
         type: "set-msg",
-        msg: chalk.red(`${isMerge ? "Merge" : "Rebase"} conflict in ${name}. Resolve in editor, status will update.`),
+        msg: chalk.red(
+          `${isMerge ? "Merge" : "Rebase"} conflict in ${name}. Resolve in editor, status will update.`,
+        ),
       })
     } else {
-      dispatch({ type: "set-msg", msg: chalk.red(`${isMerge ? "Merge" : "Rebase"} failed: ${errorMsg}`) })
+      dispatch({
+        type: "set-msg",
+        msg: chalk.red(`${isMerge ? "Merge" : "Rebase"} failed: ${errorMsg}`),
+      })
     }
   }
   await refresh()
@@ -89,13 +100,13 @@ export function useTuiInput(
     await refresh()
   }
 
-
   useInput(async (input, key) => {
     if (dialog.mode === "help") {
       if (input === "?" || input === "q" || key.escape) dispatch({ type: "dismiss" })
       return
     }
-    if (dialog.mode === "create" || dialog.mode === "slash-command" || dialog.mode === "config") return
+    if (dialog.mode === "create" || dialog.mode === "slash-command" || dialog.mode === "config")
+      return
 
     // Detail view handles its own input
     if (dialog.mode === "worktree-detail") return
@@ -138,9 +149,12 @@ export function useTuiInput(
         try {
           await killService(dialog.worktree)
           dispatch({ type: "set-msg", msg: `Service killed for ${dialog.worktree}` })
-        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+          // biome-ignore lint/suspicious/noExplicitAny: ok in catch
         } catch (e: any) {
-          dispatch({ type: "set-msg", msg: chalk.red(`Kill failed: ${e.shortMessage || e.message}`) })
+          dispatch({
+            type: "set-msg",
+            msg: chalk.red(`Kill failed: ${e.shortMessage || e.message}`),
+          })
         }
         await refresh()
       } else if (input === "n" || key.escape) {

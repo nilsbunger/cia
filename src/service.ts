@@ -1,25 +1,17 @@
+import { spawn } from "node:child_process"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { spawn } from "node:child_process"
+import { ciaTempDir, projectRoot } from "./config"
 import { log } from "./utils"
-import { projectRoot } from "./config"
 
 /** Sanitize worktree name for use as a filename (replace / with --) */
 function pidFileName(worktree: string): string {
   return `${worktree.replace(/\//g, "--")}.pid`
 }
 
-function ciaTmpDir(): string {
-  const dir = path.join(projectRoot(), ".cia-tmp")
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
-  return dir
-}
-
 function pidFilePath(worktree: string): string {
-  return path.join(ciaTmpDir(), pidFileName(worktree))
+  return path.join(ciaTempDir, pidFileName(worktree))
 }
 
 /** Detect which terminal the user is running in (best effort). */
@@ -40,7 +32,7 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-type ServiceCrashInfo ={ exitCode: number; stderr: string; stdout: string }
+type ServiceCrashInfo = { exitCode: number; stderr: string; stdout: string }
 
 /** Read PID from a pid file, returning null if missing or stale (and cleaning up stale files) */
 function readPidFile(filePath: string): number | null {
@@ -62,7 +54,7 @@ function readPidFile(filePath: string): number | null {
 }
 
 function crashFilePath(worktree: string): string {
-  return path.join(ciaTmpDir(), `${pidFileName(worktree).replace(/\.pid$/, ".crash")}`)
+  return path.join(ciaTempDir, `${pidFileName(worktree).replace(/\.pid$/, ".crash")}`)
 }
 
 /** Check for crash info left behind by a dead service process, persisting it for future reads. */
@@ -74,7 +66,9 @@ export function getServiceCrashInfo(worktree: string): ServiceCrashInfo | null {
       return JSON.parse(fs.readFileSync(crashFile, "utf-8"))
     } catch {
       // Corrupted crash file, remove it
-      try { fs.unlinkSync(crashFile) } catch {}
+      try {
+        fs.unlinkSync(crashFile)
+      } catch {}
     }
   }
 
@@ -96,7 +90,7 @@ export function getServiceCrashInfo(worktree: string): ServiceCrashInfo | null {
   // If still alive, no crash
   if (isProcessAlive(pid)) return null
 
-  const tmpDir = ciaTmpDir()
+  const tmpDir = ciaTempDir
   const exitFile = path.join(tmpDir, `${pid}.exit`)
   const stderrFile = path.join(tmpDir, `${pid}.stderr`)
   const stdoutFile = path.join(tmpDir, `${pid}.stdout`)
@@ -126,7 +120,9 @@ export function getServiceCrashInfo(worktree: string): ServiceCrashInfo | null {
 
   // Clean up transient process files (crash file persists)
   for (const f of [pidFile, exitFile, stderrFile, stdoutFile]) {
-    try { fs.unlinkSync(f) } catch {}
+    try {
+      fs.unlinkSync(f)
+    } catch {}
   }
 
   return crashInfo
@@ -135,7 +131,9 @@ export function getServiceCrashInfo(worktree: string): ServiceCrashInfo | null {
 /** Clear any persisted crash info for a worktree (called when relaunching a service). */
 function clearServiceCrash(worktree: string): void {
   const crashFile = crashFilePath(worktree)
-  try { fs.unlinkSync(crashFile) } catch {}
+  try {
+    fs.unlinkSync(crashFile)
+  } catch {}
 }
 
 /** Check if a service is running for a specific worktree */
@@ -161,15 +159,16 @@ export async function runService(
 
   clearServiceCrash(worktree)
 
-  const tmpDir = ciaTmpDir()
+  const tempDir = ciaTempDir
   const pidFile = pidFilePath(worktree)
-  const scriptPath = path.join(tmpDir, "run-service.sh")
+  const scriptPath = path.join(tempDir, "run-service.sh")
   const windowTitle = `cia (${worktree})`
   // Resolve the run command relative to the CIA project root so that scripts
   // like ./vibe.sh are found even when cwd is the worktree's run dir.
-  const resolvedCommand = runCommand.startsWith("./") || runCommand.startsWith("../")
-    ? path.resolve(projectRoot(), runCommand)
-    : runCommand
+  const resolvedCommand =
+    runCommand.startsWith("./") || runCommand.startsWith("../")
+      ? path.resolve(projectRoot, runCommand)
+      : runCommand
   const script = `#!/bin/bash
 # CIA service runner for worktree: ${worktree}
 
@@ -177,7 +176,7 @@ export async function runService(
 echo -ne "\\033]0;${windowTitle}\\007"
 
 # Record PID so CIA can track this process
-CIA_TMP=${JSON.stringify(tmpDir)}
+CIA_TMP=${JSON.stringify(tempDir)}
 echo $$ > ${JSON.stringify(pidFile)}
 
 # Ensure we capture exit code even if killed by a signal
@@ -193,7 +192,7 @@ trap cleanup EXIT
 echo "CIA service runner:"
 echo "  run dir:      ${JSON.stringify(runDir)}"
 echo "  run command:  ${JSON.stringify(runCommand)} -> ${JSON.stringify(resolvedCommand)}"
-echo "  cia root:     ${JSON.stringify(projectRoot())}"
+echo "  cia root:     ${JSON.stringify(projectRoot)}"
 echo "---"
 cd ${JSON.stringify(runDir)} || { echo "ERROR: failed to cd to run dir"; exit 1; }
 echo "  actual cwd:   $(pwd)"
@@ -245,7 +244,11 @@ function launchITerm(scriptPath: string, windowTitle: string): void {
   spawn("osascript", ["-e", osaScript], { detached: true, stdio: "ignore" })
 }
 
-async function launchWarp(scriptPath: string, worktreeDir: string, windowTitle: string): Promise<void> {
+async function launchWarp(
+  scriptPath: string,
+  worktreeDir: string,
+  windowTitle: string,
+): Promise<void> {
   const warpConfigDir = path.join(os.homedir(), ".warp", "launch_configurations")
   if (!fs.existsSync(warpConfigDir)) {
     fs.mkdirSync(warpConfigDir, { recursive: true })

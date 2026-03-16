@@ -16,7 +16,7 @@ directory, which is somewhere in a git tree. Files in a CIA project root:
 * `.cia/cia-repo.jsonc` : Configuration for the repo. Committed to git.
 * `.cia/cia-user.jsonc` : Configuration specific to this user. gitignored. Contains user-specific settings including worktree location.
 * Worktree location is configurable via `worktreeDir` in `.cia/cia-user.jsonc`. Default is `.worktrees/` but can be set to `../wt/` or any relative path.
-* `.cia-tmp/` : temp directory, use for any temp files needed.
+* `.cia/tmp/` : temp directory, use for any temp files needed.
 
 
 ## Testing

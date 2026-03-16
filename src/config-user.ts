@@ -109,4 +109,3 @@ export async function setEditor(repoRoot: string, editor: EditorType): Promise<v
   }
   fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, "utf-8")
 }
-

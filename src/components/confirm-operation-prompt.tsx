@@ -1,10 +1,10 @@
-import type React from "react"
-import { Box, Text } from "ink"
 import chalk from "chalk"
+import { Box, Text } from "ink"
+import type React from "react"
 import type { OperationCandidate } from "../types"
 
 export const ConfirmOperationPrompt: React.FC<{
-  candidate: OperationCandidate,
+  candidate: OperationCandidate
 }> = ({ candidate }) => {
   const operationName = candidate.operation === "merge" ? "Merge" : "Sync (rebase)"
   const operationDesc =
@@ -13,12 +13,7 @@ export const ConfirmOperationPrompt: React.FC<{
       : `rebase ${candidate.name} onto main`
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor="yellow"
-      paddingX={1}
-      flexDirection="column"
-      marginTop={1}>
+    <Box borderStyle="round" borderColor="yellow" paddingX={1} flexDirection="column" marginTop={1}>
       <Text>{chalk.bold.yellow("⚠ Conflicts Predicted")}</Text>
 
       <Box marginTop={1}>
@@ -40,14 +35,10 @@ export const ConfirmOperationPrompt: React.FC<{
       </Box>
 
       <Box marginTop={1}>
-        <Text>
-          {chalk.bold(`Continue with ${operationDesc}?`)}
-        </Text>
+        <Text>{chalk.bold(`Continue with ${operationDesc}?`)}</Text>
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>
-          If conflicts occur, resolve them in your editor.
-        </Text>
+        <Text dimColor>If conflicts occur, resolve them in your editor.</Text>
       </Box>
       <Box>
         <Text dimColor>y to continue • n or Esc to cancel</Text>

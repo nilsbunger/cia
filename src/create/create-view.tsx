@@ -1,8 +1,8 @@
-import type React from "react"
 import chalk from "chalk"
-import { CreatePrompt } from "./create-prompt"
-import { createWorktree, openEditor } from "../cmd-ops"
+import type React from "react"
 import type { Action } from "../app-state-reducer"
+import { createWorktree, openEditor } from "../cmd-ops"
+import { CreatePrompt } from "./create-prompt"
 
 export const CreateView: React.FC<{
   prefix: string
@@ -21,7 +21,7 @@ export const CreateView: React.FC<{
         const _dir = await createWorktree(name)
         dispatch({ type: "set-msg", msg: `Created ${name}` })
         await refresh()
-      // biome-ignore lint/suspicious/noExplicitAny: ok for exceptions
+        // biome-ignore lint/suspicious/noExplicitAny: ok for exceptions
       } catch (e: any) {
         dispatch({ type: "set-msg", msg: chalk.red(`Failed: ${e.shortMessage || e.message}`) })
       }

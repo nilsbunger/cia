@@ -1,10 +1,9 @@
-import { execa } from "execa"
-import * as path from "node:path"
-import { log } from "./utils"
 import * as fs from "node:fs"
+import * as path from "node:path"
+import { execa } from "execa"
 import { branchDirname } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
-
+import { log } from "./utils"
 
 type Worktree = {
   dir: string
@@ -35,20 +34,14 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
     if (dir === repoRoot) continue
 
     // Filter: worktree's branch must match prefix
-    const matchesPrefix = branch
-      ? branch.startsWith(branchPrefix)
-      : false
+    const matchesPrefix = branch ? branch.startsWith(branchPrefix) : false
     if (!matchesPrefix) continue
 
     // Get last commit date from HEAD of the worktree
     let lastCommitDate = 0
     try {
       const ref = branch ?? "HEAD"
-      const { stdout: tsOut } = await execa(
-        "git",
-        ["log", "-1", "--format=%ct", ref],
-        { cwd: dir },
-      )
+      const { stdout: tsOut } = await execa("git", ["log", "-1", "--format=%ct", ref], { cwd: dir })
       lastCommitDate = Number(tsOut.trim()) || 0
     } catch {
       // ignore
@@ -58,7 +51,10 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
   }
 
   worktrees.sort((a, b) => b.lastCommitDate - a.lastCommitDate)
-  log(`listWorktrees: Found ${worktrees.length} worktrees matching prefix "${branchPrefix}"`, worktrees.map((w) => w.branch ?? w.dir))
+  log(
+    `listWorktrees: Found ${worktrees.length} worktrees matching prefix "${branchPrefix}"`,
+    worktrees.map((w) => w.branch ?? w.dir),
+  )
 
   return worktrees
 }

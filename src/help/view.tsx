@@ -1,6 +1,6 @@
-import type React from "react"
-import { Box, Text } from "ink"
 import chalk from "chalk"
+import { Box, Text } from "ink"
+import type React from "react"
 import { WORKTREES_DIR_NAME } from "../constants"
 
 export const HelpView: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) => (

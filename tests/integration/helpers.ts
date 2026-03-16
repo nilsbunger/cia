@@ -1,6 +1,6 @@
-import { execa } from "execa"
-import * as path from "node:path"
 import * as fs from "node:fs"
+import * as path from "node:path"
+import { execa } from "execa"
 
 const TEST_PREFIX = "cia-test/"
 

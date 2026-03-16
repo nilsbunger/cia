@@ -1,13 +1,13 @@
-import { execa } from "execa"
-import { branchDirname } from "./fs-ops"
-import { getConfig } from "./config"
-import { listWorktrees, validateWorktree } from "./git-ops"
-import { getBaseBranch, getRepoRoot } from "./repo"
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { execa } from "execa"
 import { createWorktree } from "./cmd-ops"
-import { log } from "./utils"
+import { getConfig } from "./config"
+import { branchDirname } from "./fs-ops"
+import { listWorktrees, validateWorktree } from "./git-ops"
+import { getBaseBranch, getRepoRoot } from "./repo"
 import type { Worktree } from "./types"
+import { log } from "./utils"
 
 /** Human-readable age; use date only if older than 60 days */
 function formatCommitAge(unixTs: number): string {
@@ -69,18 +69,18 @@ export async function checkDeleteIssues(
     if (dirExists) {
       // Get status of worktree - both staged and unstaged files
       log(`checkDeleteIssues: Checking git status in worktree...`)
-      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], { cwd: worktreeDir })
+      const { stdout: statusOut } = await execa("git", ["status", "--porcelain"], {
+        cwd: worktreeDir,
+      })
       uncommittedFiles = statusOut.trim().split("\n").filter(Boolean)
       log(`checkDeleteIssues: Found ${uncommittedFiles.length} uncommitted files`)
 
       // Check if worktree is actually locked (not just has uncommitted changes)
       log(`checkDeleteIssues: Checking if worktree is locked...`)
       try {
-        const { stdout: worktreeList } = await execa(
-          "git",
-          ["worktree", "list", "--porcelain"],
-          { cwd: root },
-        )
+        const { stdout: worktreeList } = await execa("git", ["worktree", "list", "--porcelain"], {
+          cwd: root,
+        })
         const lines = worktreeList.split("\n")
         let foundOurWorktree = false
         for (const line of lines) {
@@ -105,9 +105,7 @@ export async function checkDeleteIssues(
     }
 
     const isClean =
-      unmergedCommits.length === 0 &&
-      uncommittedFiles.length === 0 &&
-      worktreeIssues.length === 0
+      unmergedCommits.length === 0 && uncommittedFiles.length === 0 && worktreeIssues.length === 0
     log(`checkDeleteIssues: Final result`, {
       isClean,
       unmergedCommits: unmergedCommits.length,
@@ -115,7 +113,7 @@ export async function checkDeleteIssues(
       worktreeIssues,
     })
     return { isClean, unmergedCommits, uncommittedFiles, worktreeIssues }
-  // biome-ignore lint/suspicious/noExplicitAny: ok
+    // biome-ignore lint/suspicious/noExplicitAny: ok
   } catch (e: any) {
     log(`checkDeleteIssues: Exception caught`, {
       message: e.message,
@@ -140,7 +138,9 @@ export async function checkForConflicts(
   try {
     // First get the merge base
     const baseBranch = await getBaseBranch()
-    const { stdout: mergeBase } = await execa("git", ["merge-base", baseBranch, branch], { cwd: root })
+    const { stdout: mergeBase } = await execa("git", ["merge-base", baseBranch, branch], {
+      cwd: root,
+    })
     const base = mergeBase.trim()
 
     // Use git merge-tree to simulate the merge and detect conflicts
@@ -166,7 +166,7 @@ export async function checkForConflicts(
 
     log(`checkForConflicts: No conflicts detected`)
     return { hasConflicts: false, conflictingFiles: [] }
-  // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
   } catch (e: any) {
     // If merge-tree fails, assume there might be conflicts
     log(`checkForConflicts: Error running merge-tree`, { error: e.message })
@@ -181,6 +181,22 @@ export async function computeWorktrees(): Promise<Worktree[]> {
   const root = result.repoRoot
   const worktrees = await listWorktrees(branchPrefix)
   const { isServiceRunning, getServiceCrashInfo } = await import("./service")
+
+  // Fetch PR information for all branches in batch
+  const branches = worktrees.map((wt) => wt.branch).filter((b): b is string => b !== null)
+  let prMap = new Map<
+    string,
+    { number: number; url: string; state: "open" | "closed" | "merged" }
+  >()
+  try {
+    const { isGhCliAvailable, getPRsForBranches } = await import("./github-ops")
+    if (await isGhCliAvailable()) {
+      prMap = await getPRsForBranches(branches)
+    }
+  } catch (e) {
+    log(`computeWorktrees: Failed to fetch PR info`, { error: (e as Error).message })
+  }
+
   const rows: Worktree[] = []
   for (const wt of worktrees) {
     const dir = wt.dir
@@ -230,6 +246,10 @@ export async function computeWorktrees(): Promise<Worktree[]> {
     }
     const running = isServiceRunning(branch)
     const serviceCrash = running ? undefined : (getServiceCrashInfo(branch) ?? undefined)
+
+    // Get PR info if available
+    const prInfo = wt.branch ? prMap.get(wt.branch) : undefined
+
     rows.push({
       name: branch,
       hasBranch: wt.branch !== null && !wt.prunable,
@@ -243,6 +263,9 @@ export async function computeWorktrees(): Promise<Worktree[]> {
       behind,
       dirtyCount,
       inProgress,
+      prNumber: prInfo?.number,
+      prUrl: prInfo?.url,
+      prState: prInfo?.state,
     })
   }
   return rows

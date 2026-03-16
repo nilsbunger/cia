@@ -1,5 +1,5 @@
-import { Box, Text } from "ink"
 import chalk from "chalk"
+import { Box, Text } from "ink"
 import type { DeleteCandidate } from "../types"
 
 const IssueList: React.FC<{ items: string[]; label: string; maxItems?: number }> = ({
@@ -19,9 +19,7 @@ const IssueList: React.FC<{ items: string[]; label: string; maxItems?: number }>
             <Text dimColor>{item}</Text>
           </Box>
         ))}
-        {items.length > maxItems && (
-          <Text dimColor>... and {items.length - maxItems} more</Text>
-        )}
+        {items.length > maxItems && <Text dimColor>... and {items.length - maxItems} more</Text>}
       </Box>
     </>
   )
@@ -33,12 +31,7 @@ export const ConfirmDeletePrompt: React.FC<{
   const { name, unmergedCommits, uncommittedFiles, worktreeIssues } = candidate
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor="red"
-      paddingX={1}
-      flexDirection="column"
-      marginTop={1}>
+    <Box borderStyle="round" borderColor="red" paddingX={1} flexDirection="column" marginTop={1}>
       <Text>{chalk.bold.red("⚠ Warning: Issues detected")}</Text>
 
       <IssueList

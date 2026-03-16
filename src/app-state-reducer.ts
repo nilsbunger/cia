@@ -1,6 +1,6 @@
+import type { EditorType } from "./config-user"
 import { BRANCH_PREFIX } from "./constants"
 import type { Dialog, Worktree } from "./types"
-import type { EditorType } from "./config-user"
 
 export type AppState = {
   branchPrefix: string
@@ -16,7 +16,14 @@ export type AppState = {
 }
 
 export type Action =
-  | { type: "loaded-config"; branchPrefix: string; editor: EditorType; runCommand: string; runDir: string; repoRoot: string }
+  | {
+      type: "loaded-config"
+      branchPrefix: string
+      editor: EditorType
+      runCommand: string
+      runDir: string
+      repoRoot: string
+    }
   | { type: "refresh-done"; rows: Worktree[] }
   | { type: "set-msg"; msg: string }
   | { type: "move"; dir: "up" | "down" }

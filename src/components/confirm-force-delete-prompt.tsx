@@ -1,16 +1,11 @@
-import type React from "react"
-import { Box, Text } from "ink"
 import chalk from "chalk"
+import { Box, Text } from "ink"
+import type React from "react"
 
 export const ConfirmForceDeletePrompt: React.FC<{
   name: string
 }> = ({ name }) => (
-  <Box
-    borderStyle="round"
-    borderColor="red"
-    paddingX={1}
-    flexDirection="column"
-    marginTop={1}>
+  <Box borderStyle="round" borderColor="red" paddingX={1} flexDirection="column" marginTop={1}>
     <Text>{chalk.bold.red("Force delete worktree?")}</Text>
     <Box marginTop={1}>
       <Text>

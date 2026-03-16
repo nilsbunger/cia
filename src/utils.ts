@@ -1,10 +1,10 @@
-import * as path from "node:path"
-import * as os from "node:os"
 import * as fs from "node:fs"
+import * as path from "node:path"
+import { ciaTempDir } from "./config"
 
 // Logging utility
-export const LOG_FILE = path.join(os.tmpdir(), "agents-tui.log")
-export function log(message: string, data?: any) {
+export const LOG_FILE = path.join(ciaTempDir, "agents-tui.log")
+export function log(message: string, data?: unknown) {
   const timestamp = new Date().toISOString()
   const logLine = data
     ? `[${timestamp}] ${message} ${JSON.stringify(data, null, 2)}\n`

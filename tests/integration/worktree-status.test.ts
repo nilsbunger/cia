@@ -1,19 +1,22 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
-import { execa } from "execa"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { cleanupAll, createTestWorktree, getTestRepoRoot, makeCommit } from "./helpers"
 
 // Mock getConfig so computeWorktrees uses our test prefix
 vi.mock("../../src/config", async () => {
   const helpers = await import("./helpers")
+  const path = await import("node:path")
   return {
     getConfig: async () => {
       const root = await helpers.getTestRepoRoot()
       return {
         ok: true,
-        config: { branchPrefix: "cia-test/" },
+        config: { branchPrefix: "cia-test/", worktreeDir: ".worktrees" },
         repoRoot: root,
       }
     },
+    projectRoot: process.cwd(),
+    ciaDir: path.join(process.cwd(), ".cia"),
+    ciaTempDir: path.join(process.cwd(), ".cia", "tmp"),
   }
 })
 
@@ -21,6 +24,12 @@ vi.mock("../../src/config", async () => {
 vi.mock("../../src/service", () => ({
   isServiceRunning: () => false,
   getServiceCrashInfo: () => null,
+}))
+
+// Mock github-ops module (computeWorktrees dynamically imports it)
+vi.mock("../../src/github-ops", () => ({
+  isGhCliAvailable: async () => false,
+  getPRsForBranches: async () => new Map(),
 }))
 
 describe("worktree ahead/behind status", () => {

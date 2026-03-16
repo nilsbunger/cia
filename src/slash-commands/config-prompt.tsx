@@ -1,8 +1,8 @@
-import type React from "react"
-import { useState } from "react"
+import chalk from "chalk"
 import { Box, Text, useInput } from "ink"
 import TextInput from "ink-text-input"
-import chalk from "chalk"
+import type React from "react"
+import { useState } from "react"
 import type { EditorType } from "../config-user"
 
 const FIELDS = ["prefix", "editor", "runCommand", "runDir"] as const
@@ -23,7 +23,12 @@ export const ConfigPrompt: React.FC<{
   currentEditor: EditorType
   currentRunCommand: string
   currentRunDir: string
-  onSubmit: (prefix: string, editor: EditorType, runCommand: string, runDir: string) => void | Promise<void>
+  onSubmit: (
+    prefix: string,
+    editor: EditorType,
+    runCommand: string,
+    runDir: string,
+  ) => void | Promise<void>
   onCancel: () => void
 }> = ({ currentPrefix, currentEditor, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
   const [prefix, setPrefix] = useState<string>(currentPrefix)
@@ -32,7 +37,7 @@ export const ConfigPrompt: React.FC<{
   const [runDir, setRunDir] = useState<string>(currentRunDir)
   const [activeField, setActiveField] = useState<Field>("prefix")
 
-  useInput((input, key) => {
+  useInput((_input, key) => {
     if (key.escape) onCancel()
     if (key.downArrow || (key.tab && !key.shift)) {
       setActiveField(nextField)

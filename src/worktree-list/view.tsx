@@ -1,8 +1,8 @@
-import type React from "react"
-import { Box, Text } from "ink"
 import chalk from "chalk"
-import type { Worktree } from "../types"
+import { Box, Text } from "ink"
+import type React from "react"
 import type { AppState } from "../app-state-reducer"
+import type { Worktree } from "../types"
 
 export const WorktreeListView: React.FC<{
   state: AppState
@@ -54,13 +54,19 @@ const WorktreeCol: React.FC<{ s: number; text: string }> = ({ s, text }) => {
     return <Text>{`${result}…`}</Text>
   }
   const pad = " ".repeat(s - visible.length)
-  return <Text>{text}{pad}</Text>
+  return (
+    <Text>
+      {text}
+      {pad}
+    </Text>
+  )
 }
 
 const Header: React.FC = () => (
   <Box>
     <WorktreeCol s={40} text={chalk.underline("Worktree")} />
     <WorktreeCol s={8} text={chalk.underline("Run")} />
+    <WorktreeCol s={10} text={chalk.underline("PR")} />
     <WorktreeCol s={14} text={chalk.underline("Last commit")} />
     <WorktreeCol s={18} text={chalk.underline("Status")} />
   </Box>
@@ -74,10 +80,21 @@ const WorktreeRow: React.FC<{ row: Worktree; selected: boolean }> = ({ row, sele
       : "—"
   const warning = row.hasBranch ? "" : " ⚠"
   const displayName = selected ? chalk.inverse(row.name) + warning : row.name + warning
+
+  // Format PR status
+  const prStatus = row.prNumber
+    ? row.prState === "merged"
+      ? chalk.magenta(`#${row.prNumber} ✓`)
+      : row.prState === "closed"
+        ? chalk.gray(`#${row.prNumber} ✕`)
+        : chalk.blue(`#${row.prNumber}`)
+    : "—"
+
   return (
     <Box>
       <WorktreeCol s={40} text={displayName} />
       <WorktreeCol s={8} text={running} />
+      <WorktreeCol s={10} text={prStatus} />
       <WorktreeCol s={14} text={row.lastCommitAge ?? "—"} />
       <WorktreeCol s={18} text={row.status || ""} />
     </Box>
@@ -91,15 +108,18 @@ const Warnings: React.FC<{ rows: Worktree[] }> = ({ rows }) => {
     <Box flexDirection="column">
       {branchWarnings.map((r) => (
         <Text key={r.name} color="yellow">
-          ⚠ {r.name}: {r.prunable ? "worktree is prunable (run git worktree prune)" : "detached HEAD"}
+          ⚠ {r.name}:{" "}
+          {r.prunable ? "worktree is prunable (run git worktree prune)" : "detached HEAD"}
         </Text>
       ))}
       {crashWarnings.map((r) => {
-        const lastLine = r.serviceCrash?.stderr.trimEnd().split("\n").pop()
-          || (r.serviceCrash?.stdout?.trimEnd().split("\n").pop() ?? "")
+        const lastLine =
+          r.serviceCrash?.stderr.trimEnd().split("\n").pop() ||
+          (r.serviceCrash?.stdout?.trimEnd().split("\n").pop() ?? "")
         return (
           <Text key={`crash-${r.name}`} color="red">
-            ✖ {r.name}: exited {r.serviceCrash?.exitCode}{lastLine ? ` — ${lastLine}` : ""}
+            ✖ {r.name}: exited {r.serviceCrash?.exitCode}
+            {lastLine ? ` — ${lastLine}` : ""}
           </Text>
         )
       })}

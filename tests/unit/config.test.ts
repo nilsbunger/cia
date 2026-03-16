@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
-import * as path from "node:path"
 import * as os from "node:os"
-import { getUserConfig, setWorktreeDir, setBranchPrefix, setEditor } from "../../src/config-user"
+import * as path from "node:path"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { getRepoConfig, setRunCommand } from "../../src/config-repo"
+import { getUserConfig, setBranchPrefix, setEditor, setWorktreeDir } from "../../src/config-user"
 
 describe("Config System", () => {
   let tempDir: string

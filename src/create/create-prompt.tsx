@@ -1,8 +1,8 @@
-import type React from "react"
-import { useState } from "react"
+import chalk from "chalk"
 import { Box, Text, useInput } from "ink"
 import TextInput from "ink-text-input"
-import chalk from "chalk"
+import type React from "react"
+import { useState } from "react"
 
 export const CreatePrompt: React.FC<{
   prefix: string // e.g., "agent/"

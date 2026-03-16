@@ -1,11 +1,11 @@
+import chalk from "chalk"
+import { Box, Text, useInput } from "ink"
 import type React from "react"
 import { useState } from "react"
-import { Box, Text, useInput } from "ink"
-import chalk from "chalk"
+import type { Action, AppState } from "../app-state-reducer"
+import { getServiceForWorktree, isServiceRunning } from "../service"
 import type { Worktree } from "../types"
 import { WORKTREE_COMMANDS } from "../types"
-import type { AppState, Action } from "../app-state-reducer"
-import { isServiceRunning, getServiceForWorktree } from "../service"
 import { executeWorktreeCommand } from "./execute-command"
 
 type DetailProps = {
@@ -65,6 +65,7 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
         <Box marginTop={1} flexDirection="column">
           <GitStatusSection worktree={worktree} />
           <ServiceSection worktree={worktree} running={running} pid={service?.pid ?? null} />
+          <PRSection worktree={worktree} />
           <WarningsSection worktree={worktree} />
         </Box>
 
@@ -92,18 +93,18 @@ const GitStatusSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
   return (
     <Box flexDirection="column">
       <Text>{chalk.dim("Git:")}</Text>
-      <Text>  Last commit: {lastCommitAge ?? "unknown"}</Text>
+      <Text> Last commit: {lastCommitAge ?? "unknown"}</Text>
       {aheadBehindText && (
         <Text>
           {"  "}Commits: {(behind ?? 0) > 0 ? chalk.yellow(aheadBehindText) : aheadBehindText}
         </Text>
       )}
       {dirtyCount !== undefined && dirtyCount > 0 && (
-        <Text>  Dirty files: {chalk.yellow(String(dirtyCount))}</Text>
+        <Text> Dirty files: {chalk.yellow(String(dirtyCount))}</Text>
       )}
       {inProgress && (
         <Box flexDirection="column">
-          <Text>  {chalk.red.bold(`${inProgress} in progress`)}</Text>
+          <Text> {chalk.red.bold(`${inProgress} in progress`)}</Text>
           <Text dimColor>
             {"  "}Open in editor to resolve, then continue the {inProgress.toLowerCase()}
           </Text>
@@ -122,7 +123,10 @@ const ServiceSection: React.FC<{
     return (
       <Box flexDirection="column" marginTop={1}>
         <Text>{chalk.dim("Service:")}</Text>
-        <Text>  {chalk.green("● running")} {chalk.dim(`(pid ${pid})`)}</Text>
+        <Text>
+          {" "}
+          {chalk.green("● running")} {chalk.dim(`(pid ${pid})`)}
+        </Text>
       </Box>
     )
   }
@@ -137,24 +141,51 @@ const ServiceSection: React.FC<{
     return (
       <Box flexDirection="column" marginTop={1}>
         <Text>{chalk.dim("Service:")}</Text>
-        <Text>  {chalk.red(`✖ crashed with exit code ${worktree.serviceCrash.exitCode}`)}</Text>
+        <Text> {chalk.red(`✖ crashed with exit code ${worktree.serviceCrash.exitCode}`)}</Text>
         {displayLines.length > 0 && (
           <Box flexDirection="column" marginTop={0}>
-            <Text dimColor>  {outputLabel} (last {displayLines.length} line{displayLines.length > 1 ? "s" : ""}):</Text>
+            <Text dimColor>
+              {" "}
+              {outputLabel} (last {displayLines.length} line{displayLines.length > 1 ? "s" : ""}):
+            </Text>
             {displayLines.map((line, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stable order
-              <Text key={i} color="red">{"    "}{line}</Text>
+              <Text key={i} color="red">
+                {"    "}
+                {line}
+              </Text>
             ))}
           </Box>
         )}
-        <Text dimColor>  Press r to restart the service</Text>
+        <Text dimColor> Press r to restart the service</Text>
       </Box>
     )
   }
   return (
     <Box flexDirection="column" marginTop={1}>
       <Text>{chalk.dim("Service:")}</Text>
-      <Text>  not running</Text>
+      <Text> not running</Text>
+    </Box>
+  )
+}
+
+const PRSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
+  if (!worktree.prNumber) return null
+
+  const stateColor =
+    worktree.prState === "merged" ? "magenta" : worktree.prState === "closed" ? "gray" : "blue"
+
+  const stateLabel =
+    worktree.prState === "merged" ? "merged ✓" : worktree.prState === "closed" ? "closed ✕" : "open"
+
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Text>{chalk.dim("Pull Request:")}</Text>
+      <Text>
+        {" "}
+        #{worktree.prNumber} {chalk[stateColor](stateLabel)}
+      </Text>
+      <Text dimColor> {worktree.prUrl}</Text>
     </Box>
   )
 }

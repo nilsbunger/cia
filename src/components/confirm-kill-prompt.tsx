@@ -1,21 +1,14 @@
-import type React from "react"
-import { Box, Text } from "ink"
 import chalk from "chalk"
+import { Box, Text } from "ink"
+import type React from "react"
 
 export const ConfirmKillPrompt: React.FC<{
   worktree: string
 }> = ({ worktree }) => (
-  <Box
-    borderStyle="round"
-    borderColor="yellow"
-    paddingX={1}
-    flexDirection="column"
-    marginTop={1}>
+  <Box borderStyle="round" borderColor="yellow" paddingX={1} flexDirection="column" marginTop={1}>
     <Text>{chalk.bold.yellow("Kill running service?")}</Text>
     <Box marginTop={1}>
-      <Text>
-        Service is running for worktree {chalk.bold(worktree)}. Kill it?
-      </Text>
+      <Text>Service is running for worktree {chalk.bold(worktree)}. Kill it?</Text>
     </Box>
     <Box marginTop={1}>
       <Text dimColor>y to kill • n or Esc to cancel</Text>
