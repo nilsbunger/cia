@@ -6,9 +6,7 @@ import { type CreateResult, CreatePrompt } from "./create-prompt"
 
 function formatCreateMsg(label: string, result: CreateWorktreeResult): string {
   const parts = [`Created ${label}`]
-  if (result.scriptError) {
-    parts.push(chalk.red(`onCreateScript error (worktree rolled back):\n${result.scriptError}`))
-  } else if (result.scriptOutput) {
+  if (result.scriptOutput) {
     parts.push(chalk.green("onCreateScript ran successfully"))
     const out = [result.scriptOutput.stdout, result.scriptOutput.stderr].filter(Boolean).join("\n")
     if (out) parts.push(out)
@@ -33,22 +31,44 @@ export const CreateView: React.FC<{
         dispatch({ type: "dismiss", msg: `Creating ${name}…` })
         try {
           const wtResult = await createWorktree(name)
-          dispatch({ type: "set-msg", msg: formatCreateMsg(name, wtResult) })
+          if (wtResult.scriptError) {
+            dispatch({
+              type: "open-dialog",
+              dialog: { mode: "confirm-cleanup-failed-create", branch: name, existingBranch: false, error: wtResult.scriptError },
+            })
+          } else {
+            dispatch({ type: "set-msg", msg: formatCreateMsg(name, wtResult) })
+          }
           await refresh()
         // biome-ignore lint/suspicious/noExplicitAny: ok for exceptions
         } catch (e: any) {
-          dispatch({ type: "set-msg", msg: chalk.red(`Failed: ${e.shortMessage || e.message}`) })
+          const error = e.shortMessage || e.message
+          dispatch({
+            type: "open-dialog",
+            dialog: { mode: "confirm-cleanup-failed-create", branch: name, existingBranch: false, error },
+          })
         }
       } else {
         const branch = result.branch
         dispatch({ type: "dismiss", msg: `Creating worktree for ${branch}…` })
         try {
           const wtResult = await createWorktree(branch, true)
-          dispatch({ type: "set-msg", msg: formatCreateMsg(branch, wtResult) })
+          if (wtResult.scriptError) {
+            dispatch({
+              type: "open-dialog",
+              dialog: { mode: "confirm-cleanup-failed-create", branch, existingBranch: true, error: wtResult.scriptError },
+            })
+          } else {
+            dispatch({ type: "set-msg", msg: formatCreateMsg(branch, wtResult) })
+          }
           await refresh()
         // biome-ignore lint/suspicious/noExplicitAny: ok for exceptions
         } catch (e: any) {
-          dispatch({ type: "set-msg", msg: chalk.red(`Failed: ${e.shortMessage || e.message}`) })
+          const error = e.shortMessage || e.message
+          dispatch({
+            type: "open-dialog",
+            dialog: { mode: "confirm-cleanup-failed-create", branch, existingBranch: true, error },
+          })
         }
       }
     }}

@@ -81,3 +81,4 @@ export type Dialog =
   | { mode: "confirm-merge"; candidate: OperationCandidate }
   | { mode: "confirm-sync"; candidate: OperationCandidate }
   | { mode: "confirm-kill-service"; worktree: string }
+  | { mode: "confirm-cleanup-failed-create"; branch: string; existingBranch: boolean; error: string }

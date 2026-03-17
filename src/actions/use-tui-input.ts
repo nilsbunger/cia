@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import { useInput } from "ink"
 import type { Action, AppState } from "../app-state-reducer"
-import { deleteWorktree } from "../cmd-ops"
+import { deleteWorktree, cleanupFailedCreate } from "../cmd-ops"
 import { createProject, getConfig } from "../config"
 import { mergeIntoMain, syncBranch } from "../git-ops"
 import { killService } from "../service"
@@ -162,6 +162,29 @@ export function useTuiInput(
       } else if (input === "n" || key.escape) {
         log("User cancelled kill service")
         dispatch({ type: "dismiss" })
+      }
+      return
+    }
+
+    if (dialog.mode === "confirm-cleanup-failed-create") {
+      if (input === "y" || key.return) {
+        const { branch, existingBranch } = dialog
+        log(`User confirmed cleanup of failed create for branch: ${branch}`)
+        dispatch({ type: "dismiss", msg: `Cleaning up ${branch}…` })
+        try {
+          await cleanupFailedCreate(branch, existingBranch)
+          dispatch({ type: "set-msg", msg: `Cleaned up failed worktree ${branch}` })
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+        } catch (e: any) {
+          dispatch({
+            type: "set-msg",
+            msg: chalk.red(`Cleanup failed: ${e.shortMessage || e.message}`),
+          })
+        }
+        await refresh()
+      } else if (input === "n" || key.escape) {
+        log(`User skipped cleanup of failed create for branch: ${dialog.branch}`)
+        dispatch({ type: "dismiss", msg: chalk.red(`Create failed: ${dialog.error}`) })
       }
       return
     }

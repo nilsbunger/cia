@@ -251,6 +251,40 @@ export interface CreateWorktreeResult {
   scriptError?: string
 }
 
+export async function cleanupFailedCreate(
+  branch: string,
+  existingBranch: boolean,
+): Promise<void> {
+  const dir = await branchDirname(branch)
+  const root = getProjectRoot()
+  log(`cleanupFailedCreate: branch=${branch}, dir=${dir}, existingBranch=${existingBranch}`)
+
+  // Remove worktree directory if it exists
+  if (fs.existsSync(dir)) {
+    try {
+      await execa("git", ["worktree", "remove", "--force", dir], { cwd: root })
+      log(`cleanupFailedCreate: Worktree removed`)
+    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    } catch (e: any) {
+      log(`cleanupFailedCreate: Failed to remove worktree: ${e.message}`)
+    }
+  }
+
+  // Prune stale worktree entries
+  await execa("git", ["worktree", "prune"], { cwd: root })
+
+  // Delete the branch only if it was newly created (not an existing branch)
+  if (!existingBranch) {
+    try {
+      await execa("git", ["branch", "-D", branch], { cwd: root })
+      log(`cleanupFailedCreate: Branch deleted`)
+    // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    } catch (e: any) {
+      log(`cleanupFailedCreate: Failed to delete branch: ${e.message}`)
+    }
+  }
+}
+
 export async function createWorktree(
   branch: string,
   existingBranch?: boolean,
@@ -292,25 +326,6 @@ export async function createWorktree(
       const stdout = e.stdout || ""
       const msg = [stdout, stderr, e.shortMessage || e.message].filter(Boolean).join("\n")
       log(`createWorktree: onCreateScript failed: ${msg}`)
-
-      // Roll back: remove the worktree and branch we just created
-      log(`createWorktree: Rolling back worktree and branch after onCreateScript failure`)
-      try {
-        await execa("git", ["worktree", "remove", dir], { cwd: getProjectRoot() })
-        log(`createWorktree: Worktree removed during rollback`)
-        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
-      } catch (rmErr: any) {
-        log(`createWorktree: Failed to remove worktree during rollback: ${rmErr.message}`)
-      }
-      if (!existingBranch) {
-        try {
-          await execa("git", ["branch", "-d", branch], { cwd: getProjectRoot() })
-          log(`createWorktree: Branch deleted during rollback`)
-          // biome-ignore lint/suspicious/noExplicitAny: ok in catch
-        } catch (brErr: any) {
-          log(`createWorktree: Failed to delete branch during rollback: ${brErr.message}`)
-        }
-      }
 
       return { dir, scriptError: msg }
     }

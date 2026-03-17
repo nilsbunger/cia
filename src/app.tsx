@@ -6,6 +6,7 @@ import { useTuiInput } from "./actions/use-tui-input"
 import type { Action, AppState } from "./app-state-reducer"
 import { appReducer, initialState } from "./app-state-reducer"
 import { computeWorktrees } from "./cmd-helpers"
+import { ConfirmCleanupCreatePrompt } from "./components/confirm-cleanup-create-prompt"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
 import { ConfirmForceDeletePrompt } from "./components/confirm-force-delete-prompt"
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
@@ -118,6 +119,8 @@ const ActiveView = ({
         return <ConfirmOperationPrompt candidate={dialog.candidate} />
       case "confirm-kill-service":
         return <ConfirmKillPrompt worktree={dialog.worktree} />
+      case "confirm-cleanup-failed-create":
+        return <ConfirmCleanupCreatePrompt branch={dialog.branch} error={dialog.error} />
       case "worktree-detail":
         return (
           <WorktreeDetailView
