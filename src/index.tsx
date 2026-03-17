@@ -3,18 +3,21 @@ import path from "node:path"
 import { execaSync } from "execa"
 import { render } from "ink"
 import App from "./app"
+import { getProjectRoot } from "./config"
 import { log } from "./utils"
 
-// When invoked via `pnpm --dir`, cwd is the package dir, not the caller's.
-// pnpm sets INIT_CWD to the original invoking directory.
-if (process.env.INIT_CWD) {
-  process.chdir(process.env.INIT_CWD)
-}
-
 // Guard: must be in a git repo, and not inside a worktree
+// Use getProjectRoot() so this works when invoked via `pnpm --dir`
+const projectRoot = getProjectRoot()
 try {
-  const gitDir = path.resolve(execaSync("git", ["rev-parse", "--git-dir"]).stdout.trim())
-  const commonDir = path.resolve(execaSync("git", ["rev-parse", "--git-common-dir"]).stdout.trim())
+  const gitDir = path.resolve(
+    projectRoot,
+    execaSync("git", ["rev-parse", "--git-dir"], { cwd: projectRoot }).stdout.trim(),
+  )
+  const commonDir = path.resolve(
+    projectRoot,
+    execaSync("git", ["rev-parse", "--git-common-dir"], { cwd: projectRoot }).stdout.trim(),
+  )
   if (gitDir !== commonDir) {
     console.error("Error: cia must be run from the main working tree, not from inside a worktree.")
     process.exit(1)

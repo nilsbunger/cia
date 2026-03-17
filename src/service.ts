@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { ciaTempDir, projectRoot } from "./config"
+import { getCiaTempDir, getProjectRoot } from "./config"
 import { log } from "./utils"
 
 /** Sanitize worktree name for use as a filename (replace / with --) */
@@ -11,7 +11,7 @@ function pidFileName(worktree: string): string {
 }
 
 function pidFilePath(worktree: string): string {
-  return path.join(ciaTempDir, pidFileName(worktree))
+  return path.join(getCiaTempDir(), pidFileName(worktree))
 }
 
 /** Detect which terminal the user is running in (best effort). */
@@ -54,7 +54,7 @@ function readPidFile(filePath: string): number | null {
 }
 
 function crashFilePath(worktree: string): string {
-  return path.join(ciaTempDir, `${pidFileName(worktree).replace(/\.pid$/, ".crash")}`)
+  return path.join(getCiaTempDir(), `${pidFileName(worktree).replace(/\.pid$/, ".crash")}`)
 }
 
 /** Check for crash info left behind by a dead service process, persisting it for future reads. */
@@ -90,7 +90,7 @@ export function getServiceCrashInfo(worktree: string): ServiceCrashInfo | null {
   // If still alive, no crash
   if (isProcessAlive(pid)) return null
 
-  const tmpDir = ciaTempDir
+  const tmpDir = getCiaTempDir()
   const exitFile = path.join(tmpDir, `${pid}.exit`)
   const stderrFile = path.join(tmpDir, `${pid}.stderr`)
   const stdoutFile = path.join(tmpDir, `${pid}.stdout`)
@@ -159,7 +159,7 @@ export async function runService(
 
   clearServiceCrash(worktree)
 
-  const tempDir = ciaTempDir
+  const tempDir = getCiaTempDir()
   const pidFile = pidFilePath(worktree)
   const scriptPath = path.join(tempDir, "run-service.sh")
   const windowTitle = `cia (${worktree})`
@@ -167,7 +167,7 @@ export async function runService(
   // like ./vibe.sh are found even when cwd is the worktree's run dir.
   const resolvedCommand =
     runCommand.startsWith("./") || runCommand.startsWith("../")
-      ? path.resolve(projectRoot, runCommand)
+      ? path.resolve(getProjectRoot(), runCommand)
       : runCommand
   const script = `#!/bin/bash
 # CIA service runner for worktree: ${worktree}
@@ -192,7 +192,7 @@ trap cleanup EXIT
 echo "CIA service runner:"
 echo "  run dir:      ${JSON.stringify(runDir)}"
 echo "  run command:  ${JSON.stringify(runCommand)} -> ${JSON.stringify(resolvedCommand)}"
-echo "  cia root:     ${JSON.stringify(projectRoot)}"
+echo "  cia root:     ${JSON.stringify(getProjectRoot())}"
 echo "---"
 cd ${JSON.stringify(runDir)} || { echo "ERROR: failed to cd to run dir"; exit 1; }
 echo "  actual cwd:   $(pwd)"

@@ -14,9 +14,9 @@ vi.mock("../../src/config", async () => {
         repoRoot: root,
       }
     },
-    projectRoot: process.cwd(),
-    ciaDir: path.join(process.cwd(), ".cia"),
-    ciaTempDir: path.join(process.cwd(), ".cia", "tmp"),
+    getProjectRoot: () => process.cwd(),
+    getCiaDir: () => path.join(process.cwd(), ".cia"),
+    getCiaTempDir: () => path.join(process.cwd(), ".cia", "tmp"),
   }
 })
 

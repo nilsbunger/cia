@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { execa } from "execa"
-import { ciaTempDir, projectRoot } from "./config"
+import { getCiaTempDir, getProjectRoot } from "./config"
 import { type EditorType, getUserConfig } from "./config-user"
 import { branchDirname, which } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
@@ -148,7 +148,7 @@ windows:
 }
 
 async function openClaudeCode(dir: string, worktreeName: string, claudeCmd: string): Promise<void> {
-  const scriptPath = path.join(ciaTempDir, "open-claude-code.sh")
+  const scriptPath = path.join(getCiaTempDir(), "open-claude-code.sh")
   const windowTitle = `WT ${worktreeName}`
 
   // Create a script that launches Claude Code in the directory
@@ -245,7 +245,7 @@ export async function openEditor(dir: string, branchName?: string) {
 }
 export async function createWorktree(branch: string): Promise<string> {
   const dir = await branchDirname(branch)
-  log(`createWorktree: branch=${branch}, root=${projectRoot}, dir=${dir}`)
+  log(`createWorktree: branch=${branch}, root=${getProjectRoot()}, dir=${dir}`)
 
   // Ensure the parent worktree directory exists
   const worktreeParentDir = path.dirname(dir)
@@ -256,7 +256,7 @@ export async function createWorktree(branch: string): Promise<string> {
   // base from the currently checked-out branch in the root worktree
   const baseBranch = await getBaseBranch()
   log(`createWorktree: Creating new worktree for ${branch} from ${baseBranch}`)
-  await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: projectRoot })
+  await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: getProjectRoot() })
   log(`createWorktree: Worktree created successfully`)
 
   return dir
