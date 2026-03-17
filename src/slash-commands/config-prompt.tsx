@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import type { EditorType } from "../config-user"
 
-const FIELDS = ["prefix", "editor", "runCommand", "runDir"] as const
+const FIELDS = ["prefix", "editor", "baseBranch", "runCommand", "runDir"] as const
 type Field = (typeof FIELDS)[number]
 
 function nextField(f: Field): Field {
@@ -21,18 +21,21 @@ function prevField(f: Field): Field {
 export const ConfigPrompt: React.FC<{
   currentPrefix: string
   currentEditor: EditorType
+  currentBaseBranch: string
   currentRunCommand: string
   currentRunDir: string
   onSubmit: (
     prefix: string,
     editor: EditorType,
+    baseBranch: string,
     runCommand: string,
     runDir: string,
   ) => void | Promise<void>
   onCancel: () => void
-}> = ({ currentPrefix, currentEditor, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
+}> = ({ currentPrefix, currentEditor, currentBaseBranch, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
   const [prefix, setPrefix] = useState<string>(currentPrefix)
   const [editor, setEditor] = useState<EditorType>(currentEditor)
+  const [baseBranch, setBaseBranch] = useState<string>(currentBaseBranch)
   const [runCommand, setRunCommand] = useState<string>(currentRunCommand)
   const [runDir, setRunDir] = useState<string>(currentRunDir)
   const [activeField, setActiveField] = useState<Field>("prefix")
@@ -77,12 +80,28 @@ export const ConfigPrompt: React.FC<{
               onSubmit={(v) => {
                 const normalized = v.trim() as EditorType
                 setEditor(normalized)
-                setActiveField("runCommand")
+                setActiveField("baseBranch")
               }}
               placeholder="auto, cursor, vscode, or claude"
             />
           ) : (
             <Text>{editor}</Text>
+          )}
+        </Box>
+        <Box marginTop={1}>
+          <Text dimColor>Base branch: </Text>
+          {activeField === "baseBranch" ? (
+            <TextInput
+              value={baseBranch}
+              onChange={setBaseBranch}
+              onSubmit={(v) => {
+                setBaseBranch(v.trim())
+                setActiveField("runCommand")
+              }}
+              placeholder="e.g. main (blank = current HEAD)"
+            />
+          ) : (
+            <Text>{baseBranch || "(current HEAD)"}</Text>
           )}
         </Box>
         <Box marginTop={1}>
@@ -107,7 +126,7 @@ export const ConfigPrompt: React.FC<{
             <TextInput
               value={runDir}
               onChange={setRunDir}
-              onSubmit={(v) => onSubmit(prefix.trim(), editor, runCommand.trim(), v.trim())}
+              onSubmit={(v) => onSubmit(prefix.trim(), editor, baseBranch.trim(), runCommand.trim(), v.trim())}
               placeholder="e.g. frontend (blank = repo root)"
             />
           ) : (

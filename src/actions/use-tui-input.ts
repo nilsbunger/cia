@@ -88,6 +88,7 @@ export function useTuiInput(
         type: "loaded-config",
         branchPrefix: result.config.branchPrefix,
         editor: result.config.editor,
+        baseBranch: result.config.baseBranch ?? "",
         runCommand: result.config.runCommand ?? "",
         runDir: result.config.runDir ?? "",
         repoRoot: result.repoRoot,

@@ -41,6 +41,7 @@ export default function App() {
           type: "loaded-config",
           branchPrefix: r.config.branchPrefix,
           editor: r.config.editor,
+          baseBranch: r.config.baseBranch ?? "",
           runCommand: r.config.runCommand ?? "",
           runDir: r.config.runDir ?? "",
           repoRoot: r.repoRoot,

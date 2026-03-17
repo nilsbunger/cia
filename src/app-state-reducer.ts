@@ -5,6 +5,7 @@ import type { Dialog, Worktree } from "./types"
 export type AppState = {
   branchPrefix: string
   editor: EditorType
+  baseBranch: string
   runCommand: string
   runDir: string
   repoRoot: string
@@ -20,6 +21,7 @@ export type Action =
       type: "loaded-config"
       branchPrefix: string
       editor: EditorType
+      baseBranch: string
       runCommand: string
       runDir: string
       repoRoot: string
@@ -34,6 +36,7 @@ export type Action =
 export const initialState: AppState = {
   branchPrefix: BRANCH_PREFIX,
   editor: "auto",
+  baseBranch: "",
   runCommand: "",
   runDir: "",
   repoRoot: "",
@@ -51,6 +54,7 @@ export function appReducer(state: AppState, action: Action): AppState {
         ...state,
         branchPrefix: action.branchPrefix,
         editor: action.editor,
+        baseBranch: action.baseBranch,
         runCommand: action.runCommand,
         runDir: action.runDir,
         repoRoot: action.repoRoot,
