@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import type { EditorType } from "../config-user"
 
-const FIELDS = ["prefix", "editor", "baseBranch", "runCommand", "runDir"] as const
+const FIELDS = ["prefix", "editor", "baseBranch", "runCommand", "runDir", "onCreateScript"] as const
 type Field = (typeof FIELDS)[number]
 
 function nextField(f: Field): Field {
@@ -24,20 +24,23 @@ export const ConfigPrompt: React.FC<{
   currentBaseBranch: string
   currentRunCommand: string
   currentRunDir: string
+  currentOnCreateScript: string
   onSubmit: (
     prefix: string,
     editor: EditorType,
     baseBranch: string,
     runCommand: string,
     runDir: string,
+    onCreateScript: string,
   ) => void | Promise<void>
   onCancel: () => void
-}> = ({ currentPrefix, currentEditor, currentBaseBranch, currentRunCommand, currentRunDir, onSubmit, onCancel }) => {
+}> = ({ currentPrefix, currentEditor, currentBaseBranch, currentRunCommand, currentRunDir, currentOnCreateScript, onSubmit, onCancel }) => {
   const [prefix, setPrefix] = useState<string>(currentPrefix)
   const [editor, setEditor] = useState<EditorType>(currentEditor)
   const [baseBranch, setBaseBranch] = useState<string>(currentBaseBranch)
   const [runCommand, setRunCommand] = useState<string>(currentRunCommand)
   const [runDir, setRunDir] = useState<string>(currentRunDir)
+  const [onCreateScript, setOnCreateScript] = useState<string>(currentOnCreateScript)
   const [activeField, setActiveField] = useState<Field>("prefix")
 
   useInput((_input, key) => {
@@ -105,7 +108,7 @@ export const ConfigPrompt: React.FC<{
           )}
         </Box>
         <Box marginTop={1}>
-          <Text dimColor>Run command: </Text>
+          <Text dimColor>Run command (dev server): </Text>
           {activeField === "runCommand" ? (
             <TextInput
               value={runCommand}
@@ -126,11 +129,27 @@ export const ConfigPrompt: React.FC<{
             <TextInput
               value={runDir}
               onChange={setRunDir}
-              onSubmit={(v) => onSubmit(prefix.trim(), editor, baseBranch.trim(), runCommand.trim(), v.trim())}
+              onSubmit={(v) => {
+                setRunDir(v.trim())
+                setActiveField("onCreateScript")
+              }}
               placeholder="e.g. frontend (blank = repo root)"
             />
           ) : (
             <Text>{runDir || "(repo root)"}</Text>
+          )}
+        </Box>
+        <Box marginTop={1}>
+          <Text dimColor>On-create script: </Text>
+          {activeField === "onCreateScript" ? (
+            <TextInput
+              value={onCreateScript}
+              onChange={setOnCreateScript}
+              onSubmit={(v) => onSubmit(prefix.trim(), editor, baseBranch.trim(), runCommand.trim(), runDir.trim(), v.trim())}
+              placeholder="e.g. pnpm install (runs in new worktree dir)"
+            />
+          ) : (
+            <Text>{onCreateScript || "(not set)"}</Text>
           )}
         </Box>
       </Box>

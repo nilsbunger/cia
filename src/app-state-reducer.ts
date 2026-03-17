@@ -8,6 +8,7 @@ export type AppState = {
   baseBranch: string
   runCommand: string
   runDir: string
+  onCreateScript: string
   repoRoot: string
   rows: Worktree[]
   idx: number
@@ -24,6 +25,7 @@ export type Action =
       baseBranch: string
       runCommand: string
       runDir: string
+      onCreateScript: string
       repoRoot: string
     }
   | { type: "refresh-done"; rows: Worktree[] }
@@ -39,6 +41,7 @@ export const initialState: AppState = {
   baseBranch: "",
   runCommand: "",
   runDir: "",
+  onCreateScript: "",
   repoRoot: "",
   rows: [],
   idx: 0,
@@ -57,6 +60,7 @@ export function appReducer(state: AppState, action: Action): AppState {
         baseBranch: action.baseBranch,
         runCommand: action.runCommand,
         runDir: action.runDir,
+        onCreateScript: action.onCreateScript,
         repoRoot: action.repoRoot,
       }
     case "refresh-done": {

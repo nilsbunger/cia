@@ -8,6 +8,14 @@ run dev tools and running web preview in them, and ultimately create and track a
 * Typecheck: `pnpm typecheck` -- accepts tsc command line args.
 * Lint: `pnpm lint`
 
+## Development
+
+During development, we run this project from the directory of a git repo we're working on.
+We run the command:
+`pnpm --dir ~/code/cia start`  (where code/cia is the directory containing this repo).
+
+In production, we will just run 'cia' after installing the package. 
+
 ## Implementation notes
 
 * All code lives in src/ . The top React component is src/App.tsx.

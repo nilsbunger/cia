@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import type React from "react"
 import type { Action, AppState } from "../app-state-reducer"
-import { getConfig, setBaseBranch, setBranchPrefix, setEditor, setRunCommand, setRunDir } from "../config"
+import { getConfig, setBaseBranch, setBranchPrefix, setEditor, setOnCreateScript, setRunCommand, setRunDir } from "../config"
 import { ConfigPrompt } from "./config-prompt"
 import { SlashCommandPrompt } from "./slash-command-prompt"
 
@@ -24,7 +24,7 @@ export const ConfigView: React.FC<{
   dispatch: React.Dispatch<Action>
   refresh: () => Promise<void>
 }> = ({ state, dispatch, refresh }) => {
-  const { branchPrefix, editor, baseBranch, runCommand, runDir, repoRoot } = state
+  const { branchPrefix, editor, baseBranch, runCommand, runDir, onCreateScript, repoRoot } = state
 
   return (
     <ConfigPrompt
@@ -33,14 +33,16 @@ export const ConfigView: React.FC<{
       currentBaseBranch={baseBranch}
       currentRunCommand={runCommand}
       currentRunDir={runDir}
-      onSubmit={async (prefix, editorType, base, cmd, dir) => {
+      currentOnCreateScript={onCreateScript}
+      onSubmit={async (prefix, editorType, base, cmd, dir, createScript) => {
         await setBranchPrefix(prefix)
         await setEditor(editorType)
         await setBaseBranch(base)
         await setRunCommand(cmd)
         await setRunDir(dir)
+        await setOnCreateScript(createScript)
         const result = await getConfig()
-        const config = result.ok ? result.config : { branchPrefix, editor, baseBranch, runCommand, runDir }
+        const config = result.ok ? result.config : { branchPrefix, editor, baseBranch, runCommand, runDir, onCreateScript }
         dispatch({
           type: "loaded-config",
           branchPrefix: config.branchPrefix,
@@ -48,6 +50,7 @@ export const ConfigView: React.FC<{
           baseBranch: config.baseBranch ?? "",
           runCommand: config.runCommand ?? "",
           runDir: config.runDir ?? "",
+          onCreateScript: config.onCreateScript ?? "",
           repoRoot,
         })
         dispatch({ type: "dismiss", msg: "Config saved" })

@@ -44,6 +44,7 @@ export default function App() {
           baseBranch: r.config.baseBranch ?? "",
           runCommand: r.config.runCommand ?? "",
           runDir: r.config.runDir ?? "",
+          onCreateScript: r.config.onCreateScript ?? "",
           repoRoot: r.repoRoot,
         })
         refresh()

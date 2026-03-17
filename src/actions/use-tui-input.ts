@@ -91,6 +91,7 @@ export function useTuiInput(
         baseBranch: result.config.baseBranch ?? "",
         runCommand: result.config.runCommand ?? "",
         runDir: result.config.runDir ?? "",
+        onCreateScript: result.config.onCreateScript ?? "",
         repoRoot: result.repoRoot,
       })
     }

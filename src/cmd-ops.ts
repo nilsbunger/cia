@@ -200,8 +200,7 @@ async function autoDetectEditor(): Promise<EditorType> {
 }
 
 export async function openEditor(dir: string, branchName?: string) {
-  const root = await getRepoRoot()
-  const userConfig = await getUserConfig(root)
+  const userConfig = await getUserConfig(getProjectRoot())
   let editorType = userConfig.editor
 
   log(`openEditor: Opening directory ${dir} with editor type: ${editorType}`)
@@ -246,7 +245,7 @@ export async function openEditor(dir: string, branchName?: string) {
 }
 export interface CreateWorktreeResult {
   dir: string
-  /** Output from onCreateScript, if one was configured and ran */
+  /** Output from onCreateScript, if one was configured and ran successfully */
   scriptOutput?: { stdout: string; stderr: string }
   /** Error from onCreateScript, if it failed */
   scriptError?: string
@@ -277,8 +276,7 @@ export async function createWorktree(
   log(`createWorktree: Worktree created successfully`)
 
   // Run onCreateScript if configured
-  const repoRoot = await getRepoRoot()
-  const repoConfig = await getRepoConfig(repoRoot)
+  const repoConfig = await getRepoConfig(getProjectRoot())
   if (repoConfig.onCreateScript) {
     log(`createWorktree: Running onCreateScript: ${repoConfig.onCreateScript}`)
     try {

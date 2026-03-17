@@ -6,6 +6,7 @@ import {
   setBaseBranch as setRepoBaseBranch,
   setRunCommand as setRepoRunCommand,
   setRunDir as setRepoRunDir,
+  setOnCreateScript as setRepoOnCreateScript,
 } from "./config-repo"
 import {
   type CiaUserConfig,
@@ -129,4 +130,8 @@ export async function setRunCommand(runCommand: string): Promise<void> {
 
 export async function setRunDir(runDir: string): Promise<void> {
   await setRepoRunDir(getProjectRoot(), runDir)
+}
+
+export async function setOnCreateScript(onCreateScript: string): Promise<void> {
+  await setRepoOnCreateScript(getProjectRoot(), onCreateScript)
 }

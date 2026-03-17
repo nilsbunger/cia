@@ -71,3 +71,14 @@ export async function setRunDir(repoRoot: string, runDir: string): Promise<void>
   const config: CiaRepoConfig = { ...current, runDir: runDir.trim() || undefined }
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
 }
+
+export async function setOnCreateScript(repoRoot: string, onCreateScript: string): Promise<void> {
+  const ciaDir = path.join(repoRoot, CIA_DIR)
+  if (!fs.existsSync(ciaDir)) {
+    fs.mkdirSync(ciaDir, { recursive: true })
+  }
+  const file = repoConfigPath(repoRoot)
+  const current = await getRepoConfig(repoRoot)
+  const config: CiaRepoConfig = { ...current, onCreateScript: onCreateScript.trim() || undefined }
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
+}
