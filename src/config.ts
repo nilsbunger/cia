@@ -68,6 +68,7 @@ export async function getConfig(): Promise<ConfigResult> {
         baseBranch: repoConfig.baseBranch,
         runCommand: repoConfig.runCommand,
         runDir: repoConfig.runDir,
+        onCreateScript: repoConfig.onCreateScript,
       },
       repoRoot,
     }
@@ -106,6 +107,7 @@ export async function createProject(): Promise<CiaConfig> {
     baseBranch: repoConfig.baseBranch,
     runCommand: repoConfig.runCommand,
     runDir: repoConfig.runDir,
+    onCreateScript: repoConfig.onCreateScript,
   }
 }
 

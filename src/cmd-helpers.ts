@@ -32,7 +32,8 @@ function formatCommitAge(unixTs: number): string {
 export async function ensureWorktree(branchName: string): Promise<string> {
   const dir = await branchDirname(branchName)
   if (fs.existsSync(dir)) return await validateWorktree(branchName)
-  return await createWorktree(branchName)
+  const result = await createWorktree(branchName)
+  return result.dir
 }
 
 export async function checkDeleteIssues(
@@ -219,16 +220,19 @@ export async function computeWorktrees(): Promise<Worktree[]> {
         inProgress = "REBASE"
       }
 
-      // Get ahead/behind info (compared to local main)
+      // Get ahead/behind info (compared to base branch)
       if (wt.branch) {
+        const baseBranch = await getBaseBranch()
         const { stdout: revListOut } = await execa(
           "git",
-          ["rev-list", "--left-right", "--count", `main...${wt.branch}`],
+          ["rev-list", "--left-right", "--count", `${baseBranch}...${wt.branch}`],
           { cwd: dir },
         )
         const parts = revListOut.trim().split("\t").map(Number)
-        ahead = parts[0]
-        behind = parts[1]
+        // --left-right: parts[0] = commits in baseBranch not in branch (behind)
+        //               parts[1] = commits in branch not in baseBranch (ahead)
+        behind = parts[0]
+        ahead = parts[1]
         const aheadBehind = ahead || behind ? `↑${ahead}↓${behind}` : ""
         status = inProgress ? `${inProgress} ${aheadBehind}` : aheadBehind
       } else {

@@ -12,6 +12,8 @@ export interface CiaRepoConfig {
   runCommand?: string
   /** Directory to run the service in, relative to repo root (e.g. "frontend") */
   runDir?: string
+  /** Shell script to run after a new worktree is created. Executed with cwd set to the new worktree directory. */
+  onCreateScript?: string
 }
 
 function repoConfigPath(repoRoot: string): string {
@@ -30,6 +32,7 @@ export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
       baseBranch: typeof data.baseBranch === "string" ? data.baseBranch : undefined,
       runCommand: typeof data.runCommand === "string" ? data.runCommand : undefined,
       runDir: typeof data.runDir === "string" ? data.runDir : undefined,
+      onCreateScript: typeof data.onCreateScript === "string" ? data.onCreateScript : undefined,
     }
   } catch {
     return {}

@@ -59,6 +59,38 @@ export async function listWorktrees(branchPrefix: string): Promise<Worktree[]> {
   return worktrees
 }
 
+/**
+ * List branches matching the given prefix that do NOT currently have a worktree.
+ */
+export async function listBranchesWithoutWorktrees(branchPrefix: string): Promise<string[]> {
+  const repoRoot = await getRepoRoot()
+
+  // Get all local branches matching the prefix
+  const { stdout: branchOutput } = await execa(
+    "git",
+    ["branch", "--format=%(refname:short)", "--list", `${branchPrefix}*`],
+    { cwd: repoRoot },
+  )
+  const allBranches = branchOutput
+    .split("\n")
+    .map((b) => b.trim())
+    .filter(Boolean)
+
+  // Get all branches that currently have worktrees
+  const { stdout: worktreeList } = await execa("git", ["worktree", "list", "--porcelain"], {
+    cwd: repoRoot,
+  })
+  const worktreeBranches = new Set<string>()
+  for (const block of worktreeList.split("\n\n").filter(Boolean)) {
+    const branchLine = block.split("\n").find((l) => l.startsWith("branch refs/heads/"))
+    if (branchLine) {
+      worktreeBranches.add(branchLine.replace("branch refs/heads/", "").trim())
+    }
+  }
+
+  return allBranches.filter((b) => !worktreeBranches.has(b))
+}
+
 export async function mergeIntoMain(branch: string) {
   // Step 1: Validate worktree exists and is in correct state
   const dir = await validateWorktree(branch)

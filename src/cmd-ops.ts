@@ -4,6 +4,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { execa } from "execa"
 import { getCiaTempDir, getProjectRoot } from "./config"
+import { getRepoConfig } from "./config-repo"
 import { type EditorType, getUserConfig } from "./config-user"
 import { branchDirname, which } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
@@ -243,9 +244,20 @@ export async function openEditor(dir: string, branchName?: string) {
     "No editor found. Please install Cursor, VS Code, or Claude Code, or configure editor in .cia/cia-user.jsonc",
   )
 }
-export async function createWorktree(branch: string): Promise<string> {
+export interface CreateWorktreeResult {
+  dir: string
+  /** Output from onCreateScript, if one was configured and ran */
+  scriptOutput?: { stdout: string; stderr: string }
+  /** Error from onCreateScript, if it failed */
+  scriptError?: string
+}
+
+export async function createWorktree(
+  branch: string,
+  existingBranch?: boolean,
+): Promise<CreateWorktreeResult> {
   const dir = await branchDirname(branch)
-  log(`createWorktree: branch=${branch}, root=${getProjectRoot()}, dir=${dir}`)
+  log(`createWorktree: branch=${branch}, root=${getProjectRoot()}, dir=${dir}, existing=${!!existingBranch}`)
 
   // Ensure the parent worktree directory exists
   const worktreeParentDir = path.dirname(dir)
@@ -253,11 +265,35 @@ export async function createWorktree(branch: string): Promise<string> {
     fs.mkdirSync(worktreeParentDir, { recursive: true })
   }
 
-  // base from the currently checked-out branch in the root worktree
-  const baseBranch = await getBaseBranch()
-  log(`createWorktree: Creating new worktree for ${branch} from ${baseBranch}`)
-  await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: getProjectRoot() })
+  if (existingBranch) {
+    log(`createWorktree: Creating worktree for existing branch ${branch}`)
+    await execa("git", ["worktree", "add", dir, branch], { cwd: getProjectRoot() })
+  } else {
+    // base from the currently checked-out branch in the root worktree
+    const baseBranch = await getBaseBranch()
+    log(`createWorktree: Creating new worktree for ${branch} from ${baseBranch}`)
+    await execa("git", ["worktree", "add", "-B", branch, dir, baseBranch], { cwd: getProjectRoot() })
+  }
   log(`createWorktree: Worktree created successfully`)
 
-  return dir
+  // Run onCreateScript if configured
+  const repoRoot = await getRepoRoot()
+  const repoConfig = await getRepoConfig(repoRoot)
+  if (repoConfig.onCreateScript) {
+    log(`createWorktree: Running onCreateScript: ${repoConfig.onCreateScript}`)
+    try {
+      const result = await execa("sh", ["-c", repoConfig.onCreateScript], { cwd: dir })
+      log(`createWorktree: onCreateScript completed`)
+      return { dir, scriptOutput: { stdout: result.stdout, stderr: result.stderr } }
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    } catch (e: any) {
+      const stderr = e.stderr || ""
+      const stdout = e.stdout || ""
+      const msg = [stdout, stderr, e.shortMessage || e.message].filter(Boolean).join("\n")
+      log(`createWorktree: onCreateScript failed: ${msg}`)
+      return { dir, scriptError: msg }
+    }
+  }
+
+  return { dir }
 }

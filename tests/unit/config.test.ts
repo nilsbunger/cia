@@ -119,6 +119,35 @@ describe("Config System", () => {
       const config = await getRepoConfig(tempDir)
       expect(config.runCommand).toBe("pnpm dev")
     })
+
+    it("should read onCreateScript from config", async () => {
+      const ciaDir = path.join(tempDir, ".cia")
+      fs.mkdirSync(ciaDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(ciaDir, "cia-repo.jsonc"),
+        JSON.stringify({ onCreateScript: "pnpm install" }, null, 2),
+        "utf-8",
+      )
+      const config = await getRepoConfig(tempDir)
+      expect(config.onCreateScript).toBe("pnpm install")
+    })
+
+    it("should default onCreateScript to undefined", async () => {
+      const config = await getRepoConfig(tempDir)
+      expect(config.onCreateScript).toBeUndefined()
+    })
+
+    it("should ignore non-string onCreateScript", async () => {
+      const ciaDir = path.join(tempDir, ".cia")
+      fs.mkdirSync(ciaDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(ciaDir, "cia-repo.jsonc"),
+        JSON.stringify({ onCreateScript: 123 }, null, 2),
+        "utf-8",
+      )
+      const config = await getRepoConfig(tempDir)
+      expect(config.onCreateScript).toBeUndefined()
+    })
   })
 
   describe("Config Directory Structure", () => {
