@@ -7,7 +7,7 @@ import { type CreateResult, CreatePrompt } from "./create-prompt"
 function formatCreateMsg(label: string, result: CreateWorktreeResult): string {
   const parts = [`Created ${label}`]
   if (result.scriptError) {
-    parts.push(chalk.red(`onCreateScript error:\n${result.scriptError}`))
+    parts.push(chalk.red(`onCreateScript error (worktree rolled back):\n${result.scriptError}`))
   } else if (result.scriptOutput) {
     parts.push(chalk.green("onCreateScript ran successfully"))
     const out = [result.scriptOutput.stdout, result.scriptOutput.stderr].filter(Boolean).join("\n")

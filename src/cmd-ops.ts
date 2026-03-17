@@ -280,7 +280,10 @@ export async function createWorktree(
   if (repoConfig.onCreateScript) {
     log(`createWorktree: Running onCreateScript: ${repoConfig.onCreateScript}`)
     try {
-      const result = await execa("sh", ["-c", repoConfig.onCreateScript], { cwd: dir })
+      const scriptPath = path.resolve(getProjectRoot(), repoConfig.onCreateScript)
+      const result = await execa("sh", ["-c", `source "${scriptPath}"`], {
+        cwd: dir,
+      })
       log(`createWorktree: onCreateScript completed`)
       return { dir, scriptOutput: { stdout: result.stdout, stderr: result.stderr } }
       // biome-ignore lint/suspicious/noExplicitAny: ok in catch
@@ -289,6 +292,26 @@ export async function createWorktree(
       const stdout = e.stdout || ""
       const msg = [stdout, stderr, e.shortMessage || e.message].filter(Boolean).join("\n")
       log(`createWorktree: onCreateScript failed: ${msg}`)
+
+      // Roll back: remove the worktree and branch we just created
+      log(`createWorktree: Rolling back worktree and branch after onCreateScript failure`)
+      try {
+        await execa("git", ["worktree", "remove", dir], { cwd: getProjectRoot() })
+        log(`createWorktree: Worktree removed during rollback`)
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+      } catch (rmErr: any) {
+        log(`createWorktree: Failed to remove worktree during rollback: ${rmErr.message}`)
+      }
+      if (!existingBranch) {
+        try {
+          await execa("git", ["branch", "-d", branch], { cwd: getProjectRoot() })
+          log(`createWorktree: Branch deleted during rollback`)
+          // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+        } catch (brErr: any) {
+          log(`createWorktree: Failed to delete branch during rollback: ${brErr.message}`)
+        }
+      }
+
       return { dir, scriptError: msg }
     }
   }
