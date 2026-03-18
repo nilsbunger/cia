@@ -63,7 +63,7 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
         <Text dimColor>{worktree.worktreeDir}</Text>
 
         <Box marginTop={1} flexDirection="column">
-          <GitStatusSection worktree={worktree} />
+          <GitStatusSection worktree={worktree} baseBranch={state.baseBranch} />
           <ServiceSection worktree={worktree} running={running} pid={service?.pid ?? null} />
           <PRSection worktree={worktree} />
           <WarningsSection worktree={worktree} />
@@ -80,14 +80,17 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
   )
 }
 
-const GitStatusSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
+const GitStatusSection: React.FC<{ worktree: Worktree; baseBranch: string }> = ({
+  worktree,
+  baseBranch,
+}) => {
   const { ahead, behind, dirtyCount, inProgress, lastCommitAge } = worktree
 
   const hasAheadBehind = ahead !== undefined && behind !== undefined
   const aheadBehindText = hasAheadBehind
     ? ahead === 0 && behind === 0
-      ? "up to date with main"
-      : `${ahead} ahead, ${behind} behind main`
+      ? `up to date with ${baseBranch}`
+      : `${ahead} ahead, ${behind} behind ${baseBranch}`
     : null
 
   return (
