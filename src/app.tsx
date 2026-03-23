@@ -8,7 +8,6 @@ import { appReducer, initialState } from "./app-state-reducer"
 import { computeWorktrees } from "./cmd-helpers"
 import { ConfirmCleanupCreatePrompt } from "./components/confirm-cleanup-create-prompt"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
-import { ConfirmForceDeletePrompt } from "./components/confirm-force-delete-prompt"
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
@@ -112,9 +111,6 @@ const ActiveView = ({
         return <CreateView prefix={branchPrefix} dispatch={dispatch} refresh={refresh} />
       case "confirm-delete":
         return <ConfirmDeletePrompt candidate={dialog.candidate} />
-      case "confirm-force-delete":
-        return <ConfirmForceDeletePrompt name={dialog.candidate.name} />
-      case "confirm-merge":
       case "confirm-sync":
         return <ConfirmOperationPrompt candidate={dialog.candidate} />
       case "confirm-kill-service":

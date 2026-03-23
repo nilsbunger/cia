@@ -15,14 +15,13 @@ export const HelpView: React.FC<{ branchPrefix: string }> = ({ branchPrefix }) =
       <Text> q Quit</Text>
       <Box marginTop={1} flexDirection="column">
         <Text>{chalk.bold("Worktree detail (after pressing enter)")}</Text>
-        <Text> c Open in Cursor/VSCode (creates worktree if needed)</Text>
+        <Text> e Open in Cursor/VSCode (creates worktree if needed)</Text>
+        <Text> c Stage all changes & commit (opens terminal)</Text>
         <Text> r Run service (opens new terminal; requires run command in /config)</Text>
         <Text> x Kill running service (with confirmation)</Text>
         <Text> s Sync (rebase onto local main)</Text>
-        <Text> p Push to remote for backup</Text>
-        <Text> m Merge → main</Text>
+        <Text> p Create PR / push to remote (context-dependent)</Text>
         <Text> d Delete worktree + branch + remote backup (warns if unmerged)</Text>
-        <Text> D Force delete worktree (with confirmation)</Text>
         <Text> esc Back to list</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">

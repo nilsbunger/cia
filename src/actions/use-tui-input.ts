@@ -3,9 +3,8 @@ import { useInput } from "ink"
 import type { Action, AppState } from "../app-state-reducer"
 import { deleteWorktree, cleanupFailedCreate } from "../cmd-ops"
 import { createProject, getConfig } from "../config"
-import { mergeIntoMain, syncBranch } from "../git-ops"
+import { syncBranch } from "../git-ops"
 import { killService } from "../service"
-import type { OperationCandidate } from "../types"
 import { log } from "../utils"
 
 async function handleDeleteConfirm(
@@ -32,25 +31,17 @@ async function handleDeleteConfirm(
   }
 }
 
-async function handleOperationConfirm(
-  candidate: OperationCandidate,
+async function handleSyncConfirm(
+  candidate: { name: string },
   dispatch: React.Dispatch<Action>,
   refresh: () => Promise<void>,
 ) {
-  const { name, operation } = candidate
-  const isMerge = operation === "merge"
-  log(`User confirmed ${operation} for worktree: ${name}`)
-  dispatch({
-    type: "dismiss",
-    msg: `${isMerge ? "Merging" : "Syncing"} ${name}${isMerge ? " -> main" : ""}…`,
-  })
+  const { name } = candidate
+  log(`User confirmed sync for worktree: ${name}`)
+  dispatch({ type: "dismiss", msg: `Syncing ${name}…` })
   try {
-    if (isMerge) await mergeIntoMain(name)
-    else await syncBranch(name)
-    dispatch({
-      type: "set-msg",
-      msg: `${isMerge ? "Merged" : "Synced"} ${name}${isMerge ? " into main" : ""}`,
-    })
+    await syncBranch(name)
+    dispatch({ type: "set-msg", msg: `Synced ${name}` })
     // biome-ignore lint/suspicious/noExplicitAny: ok in catch
   } catch (e: any) {
     const errorMsg = e.shortMessage || e.message
@@ -58,13 +49,13 @@ async function handleOperationConfirm(
       dispatch({
         type: "set-msg",
         msg: chalk.red(
-          `${isMerge ? "Merge" : "Rebase"} conflict in ${name}. Resolve in editor, status will update.`,
+          `Rebase conflict in ${name}. Resolve in editor, status will update.`,
         ),
       })
     } else {
       dispatch({
         type: "set-msg",
-        msg: chalk.red(`${isMerge ? "Merge" : "Rebase"} failed: ${errorMsg}`),
+        msg: chalk.red(`Rebase failed: ${errorMsg}`),
       })
     }
   }
@@ -124,7 +115,7 @@ export function useTuiInput(
       return
     }
 
-    if (dialog.mode === "confirm-delete" || dialog.mode === "confirm-force-delete") {
+    if (dialog.mode === "confirm-delete") {
       if (input === "y") {
         await handleDeleteConfirm(dialog.candidate, dispatch, refresh)
       } else if (input === "n" || key.escape) {
@@ -134,11 +125,11 @@ export function useTuiInput(
       return
     }
 
-    if (dialog.mode === "confirm-merge" || dialog.mode === "confirm-sync") {
+    if (dialog.mode === "confirm-sync") {
       if (input === "y") {
-        await handleOperationConfirm(dialog.candidate, dispatch, refresh)
+        await handleSyncConfirm(dialog.candidate, dispatch, refresh)
       } else if (input === "n" || key.escape) {
-        log(`User cancelled ${dialog.candidate.operation} for worktree: ${dialog.candidate.name}`)
+        log(`User cancelled sync for worktree: ${dialog.candidate.name}`)
         dispatch({ type: "dismiss" })
       }
       return

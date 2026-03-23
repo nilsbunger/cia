@@ -1,11 +1,11 @@
 import chalk from "chalk"
 import { Box, Text, useInput } from "ink"
 import type React from "react"
-import { useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import type { Action, AppState } from "../app-state-reducer"
 import { getServiceForWorktree, isServiceRunning } from "../service"
-import type { Worktree } from "../types"
-import { WORKTREE_COMMANDS } from "../types"
+import type { Worktree, WorktreeCommand } from "../types"
+import { getWorktreeCommands } from "../types"
 import { executeWorktreeCommand } from "./execute-command"
 
 type DetailProps = {
@@ -23,9 +23,11 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
   refresh,
   exit,
 }) => {
+  const commands = useMemo(() => getWorktreeCommands(worktree), [worktree])
   const [idx, setIdx] = useState(0)
   const service = getServiceForWorktree(worktree.name)
   const running = isServiceRunning(worktree.name)
+  const processingRef = useRef(false)
 
   useInput(async (input, key) => {
     if (input === "q" || (key.ctrl && input === "c")) {
@@ -41,19 +43,26 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
       return
     }
     if (key.downArrow || input === "j") {
-      setIdx((i) => Math.min(WORKTREE_COMMANDS.length - 1, i + 1))
+      setIdx((i) => Math.min(commands.length - 1, i + 1))
       return
     }
+    // Guard against concurrent command execution
+    if (processingRef.current) return
     // Execute command by letter shortcut or ENTER on selected
-    const commandKey = key.return ? WORKTREE_COMMANDS[idx].key : input
-    const cmdIdx = WORKTREE_COMMANDS.findIndex((c) => c.key === commandKey)
+    const commandKey = key.return ? commands[idx].key : input
+    const cmdIdx = commands.findIndex((c) => c.key === commandKey)
     if (cmdIdx === -1) return
-    // Move highlight to the command before executing, let render tick
-    if (cmdIdx !== idx) {
-      setIdx(cmdIdx)
-      await new Promise((r) => setTimeout(r, 80))
+    processingRef.current = true
+    try {
+      // Move highlight to the command before executing, let render tick
+      if (cmdIdx !== idx) {
+        setIdx(cmdIdx)
+        await new Promise((r) => setTimeout(r, 80))
+      }
+      await executeWorktreeCommand(commandKey, worktree, state, dispatch, refresh)
+    } finally {
+      processingRef.current = false
     }
-    await executeWorktreeCommand(commandKey, worktree, state, dispatch, refresh)
   })
 
   return (
@@ -71,7 +80,7 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
 
         <Box marginTop={1} flexDirection="column">
           <Text>{chalk.bold("Commands:")}</Text>
-          {WORKTREE_COMMANDS.map((cmd, i) => (
+          {commands.map((cmd, i) => (
             <CommandRow key={cmd.key} cmd={cmd} selected={i === idx} />
           ))}
         </Box>
@@ -173,7 +182,14 @@ const ServiceSection: React.FC<{
 }
 
 const PRSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
-  if (!worktree.prNumber) return null
+  if (!worktree.prNumber) {
+    return (
+      <Box flexDirection="column" marginTop={1}>
+        <Text>{chalk.dim("Pull Request:")}</Text>
+        <Text> No PR yet {chalk.dim("— press p to create")}</Text>
+      </Box>
+    )
+  }
 
   const stateColor =
     worktree.prState === "merged" ? "magenta" : worktree.prState === "closed" ? "gray" : "blue"
@@ -199,15 +215,15 @@ const WarningsSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
     <Box flexDirection="column" marginTop={1}>
       <Text color="yellow">
         {worktree.prunable
-          ? "⚠ Worktree is prunable — the directory is missing. Use D to force delete, or run `git worktree prune`."
-          : "⚠ Detached HEAD — this worktree is not on a branch. Use D to force delete if no longer needed."}
+          ? "⚠ Worktree is prunable — the directory is missing. Use d to delete."
+          : "⚠ Detached HEAD — this worktree is not on a branch. Use d to delete if no longer needed."}
       </Text>
     </Box>
   )
 }
 
 const CommandRow: React.FC<{
-  cmd: { key: string; label: string; description: string }
+  cmd: WorktreeCommand
   selected: boolean
 }> = ({ cmd, selected }) => {
   const keyCol = chalk.yellow(cmd.key.padEnd(2))

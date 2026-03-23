@@ -6,11 +6,8 @@ import type { OperationCandidate } from "../types"
 export const ConfirmOperationPrompt: React.FC<{
   candidate: OperationCandidate
 }> = ({ candidate }) => {
-  const operationName = candidate.operation === "merge" ? "Merge" : "Sync (rebase)"
-  const operationDesc =
-    candidate.operation === "merge"
-      ? `merge ${candidate.name} into main`
-      : `rebase ${candidate.name} onto main`
+  const operationName = "Sync (rebase)"
+  const operationDesc = `rebase ${candidate.name} onto main`
 
   return (
     <Box borderStyle="round" borderColor="yellow" paddingX={1} flexDirection="column" marginTop={1}>

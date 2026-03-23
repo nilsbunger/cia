@@ -38,35 +38,31 @@ export type DeleteCandidate = {
   worktreeIssues: string[]
 }
 
-export type ForceDeleteCandidate = {
-  name: string
-  worktreeDir: string
-  hasBranch: boolean
-}
-
 export type OperationCandidate = {
   name: string
-  operation: "merge" | "sync"
+  operation: "sync"
   conflictingFiles: string[]
 }
 
-type WorktreeCommand = {
+export type WorktreeCommand = {
   key: string
   label: string
   description: string
 }
 
-export const WORKTREE_COMMANDS: WorktreeCommand[] = [
-  { key: "c", label: "Code", description: "Open in editor" },
-  { key: "r", label: "Run", description: "Start service in new terminal" },
-  { key: "x", label: "Kill", description: "Stop running service" },
-  { key: "s", label: "Sync", description: "Rebase onto main" },
-  { key: "p", label: "Push", description: "Backup to remote" },
-  { key: "g", label: "PR", description: "Create GitHub pull request" },
-  { key: "m", label: "Merge", description: "Merge into main" },
-  { key: "d", label: "Delete", description: "Delete worktree + branch" },
-  { key: "D", label: "Force Delete", description: "Force delete worktree + branch (skip checks)" },
-]
+export function getWorktreeCommands(worktree: Worktree): WorktreeCommand[] {
+  return [
+    { key: "e", label: "Edit", description: "Open in editor" },
+    { key: "c", label: "Commit", description: "Stage all & commit in terminal" },
+    { key: "r", label: "Run", description: "Start service in new terminal" },
+    { key: "x", label: "Kill", description: "Stop running service" },
+    { key: "s", label: "Sync", description: "Rebase onto main" },
+    worktree.prNumber
+      ? { key: "p", label: "Push", description: "Push to remote" }
+      : { key: "p", label: "Create PR", description: "Create GitHub pull request" },
+    { key: "d", label: "Delete", description: "Delete worktree + branch" },
+  ]
+}
 
 export type Dialog =
   | { mode: "list" }
@@ -77,8 +73,6 @@ export type Dialog =
   | { mode: "init" }
   | { mode: "worktree-detail"; worktree: Worktree }
   | { mode: "confirm-delete"; candidate: DeleteCandidate }
-  | { mode: "confirm-force-delete"; candidate: ForceDeleteCandidate }
-  | { mode: "confirm-merge"; candidate: OperationCandidate }
   | { mode: "confirm-sync"; candidate: OperationCandidate }
   | { mode: "confirm-kill-service"; worktree: string }
   | { mode: "confirm-cleanup-failed-create"; branch: string; existingBranch: boolean; error: string }
