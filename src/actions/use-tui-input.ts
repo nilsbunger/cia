@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import { useInput } from "ink"
 import type { Action, AppState } from "../app-state-reducer"
-import { deleteWorktree, cleanupFailedCreate } from "../cmd-ops"
+import { deleteWorktree, cleanupFailedCreate, openEditor } from "../cmd-ops"
 import { createProject, getConfig } from "../config"
 import { syncBranch } from "../git-ops"
 import { killService } from "../service"
@@ -78,7 +78,6 @@ export function useTuiInput(
       dispatch({
         type: "loaded-config",
         branchPrefix: result.config.branchPrefix,
-        editor: result.config.editor,
         baseBranch: result.config.baseBranch ?? "",
         runCommand: result.config.runCommand ?? "",
         runDir: result.config.runDir ?? "",
@@ -177,6 +176,25 @@ export function useTuiInput(
       } else if (input === "n" || key.escape) {
         log(`User skipped cleanup of failed create for branch: ${dialog.branch}`)
         dispatch({ type: "dismiss", msg: chalk.red(`Create failed: ${dialog.error}`) })
+      }
+      return
+    }
+
+    if (dialog.mode === "confirm-edit") {
+      if (key.return) {
+        const { info } = dialog
+        log(`User confirmed edit for worktree: ${info.worktreeName}`)
+        dispatch({ type: "dismiss", msg: `Opening ${info.worktreeName}…` })
+        try {
+          await openEditor(info.dir, info.worktreeName, state.branchPrefix)
+          dispatch({ type: "set-msg", msg: `Opened ${info.worktreeName}` })
+        // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+        } catch (e: any) {
+          dispatch({ type: "set-msg", msg: chalk.red(e.message) })
+        }
+      } else if (key.escape) {
+        log(`User cancelled edit for worktree: ${dialog.info.worktreeName}`)
+        dispatch({ type: "dismiss" })
       }
       return
     }

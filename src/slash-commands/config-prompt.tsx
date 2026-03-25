@@ -3,9 +3,9 @@ import { Box, Text, useInput } from "ink"
 import TextInput from "ink-text-input"
 import type React from "react"
 import { useState } from "react"
-import type { EditorType } from "../config-user"
+import { VAR_DESCRIPTIONS } from "../vars"
 
-const FIELDS = ["prefix", "editor", "baseBranch", "runCommand", "runDir", "onCreateScript", "editCommand"] as const
+const FIELDS = ["prefix", "baseBranch", "runCommand", "runDir", "onCreateScript", "editCommand"] as const
 type Field = (typeof FIELDS)[number]
 
 function nextField(f: Field): Field {
@@ -20,7 +20,6 @@ function prevField(f: Field): Field {
 
 export const ConfigPrompt: React.FC<{
   currentPrefix: string
-  currentEditor: EditorType
   currentBaseBranch: string
   currentRunCommand: string
   currentRunDir: string
@@ -28,7 +27,6 @@ export const ConfigPrompt: React.FC<{
   currentEditCommand: string
   onSubmit: (
     prefix: string,
-    editor: EditorType,
     baseBranch: string,
     runCommand: string,
     runDir: string,
@@ -36,9 +34,8 @@ export const ConfigPrompt: React.FC<{
     editCommand: string,
   ) => void | Promise<void>
   onCancel: () => void
-}> = ({ currentPrefix, currentEditor, currentBaseBranch, currentRunCommand, currentRunDir, currentOnCreateScript, currentEditCommand, onSubmit, onCancel }) => {
+}> = ({ currentPrefix, currentBaseBranch, currentRunCommand, currentRunDir, currentOnCreateScript, currentEditCommand, onSubmit, onCancel }) => {
   const [prefix, setPrefix] = useState<string>(currentPrefix)
-  const [editor, setEditor] = useState<EditorType>(currentEditor)
   const [baseBranch, setBaseBranch] = useState<string>(currentBaseBranch)
   const [runCommand, setRunCommand] = useState<string>(currentRunCommand)
   const [runDir, setRunDir] = useState<string>(currentRunDir)
@@ -69,29 +66,12 @@ export const ConfigPrompt: React.FC<{
               onChange={setPrefix}
               onSubmit={(v) => {
                 setPrefix(v.trim())
-                setActiveField("editor")
+                setActiveField("baseBranch")
               }}
               placeholder="e.g. nils/ or agent/"
             />
           ) : (
             <Text>{prefix || "(none)"}</Text>
-          )}
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Editor: </Text>
-          {activeField === "editor" ? (
-            <TextInput
-              value={editor}
-              onChange={(v) => setEditor(v as EditorType)}
-              onSubmit={(v) => {
-                const normalized = v.trim() as EditorType
-                setEditor(normalized)
-                setActiveField("baseBranch")
-              }}
-              placeholder="auto, cursor, vscode, or claude"
-            />
-          ) : (
-            <Text>{editor}</Text>
           )}
         </Box>
         <Box marginTop={1}>
@@ -152,7 +132,7 @@ export const ConfigPrompt: React.FC<{
                 setOnCreateScript(v.trim())
                 setActiveField("editCommand")
               }}
-              placeholder="e.g. pnpm install (runs in new worktree dir)"
+              placeholder="e.g. ./scripts/setup.sh (runs in new worktree dir)"
             />
           ) : (
             <Text>{onCreateScript || "(not set)"}</Text>
@@ -164,13 +144,17 @@ export const ConfigPrompt: React.FC<{
             <TextInput
               value={editCommand}
               onChange={setEditCommand}
-              onSubmit={(v) => onSubmit(prefix.trim(), editor, baseBranch.trim(), runCommand.trim(), runDir.trim(), onCreateScript.trim(), v.trim())}
-              placeholder="e.g. cursor -n . (runs in worktree root)"
+              onSubmit={(v) => onSubmit(prefix.trim(), baseBranch.trim(), runCommand.trim(), runDir.trim(), onCreateScript.trim(), v.trim())}
+              placeholder="e.g. cursor -n . (blank = auto-detect)"
             />
           ) : (
-            <Text>{editCommand || "(not set — uses editor setting)"}</Text>
+            <Text>{editCommand || "(auto-detect)"}</Text>
           )}
         </Box>
+      </Box>
+      <Box marginTop={1} flexDirection="column">
+        <Text dimColor>Variables for commands: {VAR_DESCRIPTIONS.map((v) => `\${${v.name}}`).join(", ")}</Text>
+        <Text dimColor>Also set as env vars: {VAR_DESCRIPTIONS.map((v) => v.envName).join(", ")}</Text>
       </Box>
       <Box marginTop={1}>
         <Text dimColor>↑↓/Tab to switch fields • Enter to save/next • Esc to cancel</Text>

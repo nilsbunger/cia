@@ -25,6 +25,9 @@ In production, we will just run 'cia' after installing the package.
 * Worktree location is configurable via `worktreeDir` in `.cia/cia-user.jsonc`. Default is `.worktrees/` but can be set to `../wt/` or any relative path.
 * `.cia/tmp/` : temp directory, use for any temp files needed.
 * `onCreateScript` in repo config: path is resolved relative to the project root, but executes with cwd in the new worktree. The `.cia/` directory only exists in the project root, not in worktrees.
+* `src/vars.ts` defines CIA variables (`CiaVars`, `buildVars`, `makeCiaEnv`, `VAR_DESCRIPTIONS`) — these are the `CIA_*` env vars passed to scripts and used for command interpolation across the app.
+* Config is split: `config-repo.ts` (cia-repo.jsonc, committed) vs `config-user.ts` (cia-user.jsonc, gitignored). `branchPrefix` and `worktreeDir` live in user config; `baseBranch`, `runCommand`, `onCreateScript`, `editCommand` live in repo config. `config.ts` merges both.
+* TUI state (`AppState` in `app-state-reducer.ts`) holds the merged config values. Command execution in `worktree-list/execute-command.ts` receives state and threads config values to `cmd-ops.ts` and `service.ts`.
 
 
 ## Testing

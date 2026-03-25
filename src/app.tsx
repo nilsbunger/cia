@@ -8,6 +8,7 @@ import { appReducer, initialState } from "./app-state-reducer"
 import { computeWorktrees } from "./cmd-helpers"
 import { ConfirmCleanupCreatePrompt } from "./components/confirm-cleanup-create-prompt"
 import { ConfirmDeletePrompt } from "./components/confirm-delete-prompt"
+import { ConfirmEditPrompt } from "./components/confirm-edit-prompt"
 import { ConfirmKillPrompt } from "./components/confirm-kill-prompt"
 import { ConfirmOperationPrompt } from "./components/confirm-operation-prompt"
 import { InitPrompt } from "./components/init-prompt"
@@ -40,7 +41,6 @@ export default function App() {
         dispatch({
           type: "loaded-config",
           branchPrefix: r.config.branchPrefix,
-          editor: r.config.editor,
           baseBranch: r.config.baseBranch ?? "",
           runCommand: r.config.runCommand ?? "",
           runDir: r.config.runDir ?? "",
@@ -92,8 +92,11 @@ const ActiveView = ({
 }) => {
   const { dialog, msg, branchPrefix } = state
 
+  // Skip auto-refresh while a multi-line message is displayed — re-renders
+  // force the terminal scroll back to the bottom, preventing the user from
+  // scrolling up to read long output (e.g. onCreateScript results).
   useInterval(() => {
-    if (dialog.mode === "list" || dialog.mode === "worktree-detail") refresh()
+    if ((dialog.mode === "list" || dialog.mode === "worktree-detail") && !msg.includes("\n")) refresh()
   }, 5000)
 
   useTuiInput(state, dispatch, refresh, exit)
@@ -118,6 +121,8 @@ const ActiveView = ({
         return <ConfirmKillPrompt worktree={dialog.worktree} />
       case "confirm-cleanup-failed-create":
         return <ConfirmCleanupCreatePrompt branch={dialog.branch} error={dialog.error} />
+      case "confirm-edit":
+        return <ConfirmEditPrompt info={dialog.info} />
       case "worktree-detail":
         return (
           <WorktreeDetailView

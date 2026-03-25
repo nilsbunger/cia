@@ -43,7 +43,7 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
       exit()
       return
     }
-    if (key.escape || key.backspace) {
+    if (key.escape || key.backspace || key.delete) {
       if (activeMenu) {
         const menuIdx = menus.findIndex((m) => m.key === activeMenu)
         setActiveMenu(null)
@@ -64,12 +64,26 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
     if (processingRef.current) return
 
     if (!activeMenu) {
-      // Top level: open a submenu
+      // Top level: open a submenu or execute directly
       const menuKey = key.return ? menus[idx].key : input
       const target = menus.find((m) => m.key === menuKey)
       if (!target) return
-      setActiveMenu(menuKey)
-      setIdx(0)
+      if (target.direct) {
+        processingRef.current = true
+        try {
+          const menuIdx = menus.findIndex((m) => m.key === menuKey)
+          if (menuIdx !== idx) {
+            setIdx(menuIdx)
+            await new Promise((r) => setTimeout(r, 80))
+          }
+          await executeWorktreeCommand(menuKey, worktree, state, dispatch, refresh)
+        } finally {
+          processingRef.current = false
+        }
+      } else {
+        setActiveMenu(menuKey)
+        setIdx(0)
+      }
     } else {
       // Inside a submenu: execute a command
       const commands = currentMenu!.commands
@@ -113,7 +127,7 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
               {currentMenu.commands.map((cmd, i) => (
                 <CommandRow key={cmd.key} cmd={cmd} selected={i === idx} />
               ))}
-              <Text dimColor>{"  "}← esc back</Text>
+              <Text dimColor>{"  "}← esc/⌫ back</Text>
             </>
           ) : (
             <>
@@ -255,8 +269,8 @@ const WarningsSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
     <Box flexDirection="column" marginTop={1}>
       <Text color="yellow">
         {worktree.prunable
-          ? "⚠ Worktree is prunable — the directory is missing. Use d › d to delete."
-          : "⚠ Detached HEAD — this worktree is not on a branch. Use d › d to delete if no longer needed."}
+          ? "⚠ Worktree is prunable — the directory is missing. Use g › d to delete."
+          : "⚠ Detached HEAD — this worktree is not on a branch. Use g › d to delete if no longer needed."}
       </Text>
     </Box>
   )
@@ -267,7 +281,7 @@ const MenuRow: React.FC<{
   selected: boolean
 }> = ({ menu, selected }) => {
   const keyCol = chalk.yellow(menu.key.padEnd(2))
-  const label = `${menu.label} ›`.padEnd(14)
+  const label = (menu.direct ? menu.label : `${menu.label} ›`).padEnd(14)
   const line = `  ${keyCol} ${label} ${chalk.dim(menu.description)}`
   return <Text>{selected ? chalk.inverse(line) : line}</Text>
 }

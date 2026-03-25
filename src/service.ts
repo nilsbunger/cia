@@ -4,6 +4,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { getCiaTempDir, getProjectRoot } from "./config"
 import { log } from "./utils"
+import { bashExports, buildVars, interpolate } from "./vars"
 
 /** Sanitize worktree name for use as a filename (replace / with --) */
 function pidFileName(worktree: string): string {
@@ -150,8 +151,10 @@ export function getServiceForWorktree(worktree: string): { worktree: string; pid
 
 export async function runService(
   worktree: string,
+  worktreeDir: string,
   runDir: string,
   runCommand: string,
+  branchPrefix?: string,
 ): Promise<void> {
   if (isServiceRunning(worktree)) {
     throw new Error(`Service already running for worktree ${worktree}. Kill it first (x).`)
@@ -163,17 +166,22 @@ export async function runService(
   const pidFile = pidFilePath(worktree)
   const scriptPath = path.join(tempDir, "run-service.sh")
   const windowTitle = `cia (${worktree})`
+  const vars = buildVars(worktree, worktreeDir, branchPrefix)
+  const interpolatedCommand = interpolate(runCommand, vars)
   // Resolve the run command relative to the CIA project root so that scripts
   // like ./vibe.sh are found even when cwd is the worktree's run dir.
   const resolvedCommand =
-    runCommand.startsWith("./") || runCommand.startsWith("../")
-      ? path.resolve(getProjectRoot(), runCommand)
-      : runCommand
+    interpolatedCommand.startsWith("./") || interpolatedCommand.startsWith("../")
+      ? path.resolve(getProjectRoot(), interpolatedCommand)
+      : interpolatedCommand
   const script = `#!/bin/bash
 # CIA service runner for worktree: ${worktree}
 
 # Set terminal window title
 echo -ne "\\033]0;${windowTitle}\\007"
+
+# CIA environment variables
+${bashExports(vars)}
 
 # Record PID so CIA can track this process
 CIA_TMP=${JSON.stringify(tempDir)}

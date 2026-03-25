@@ -5,10 +5,11 @@ import * as path from "node:path"
 import { execa } from "execa"
 import { getCiaTempDir, getProjectRoot } from "./config"
 import { getRepoConfig } from "./config-repo"
-import { type EditorType, getUserConfig } from "./config-user"
+import { getUserConfig } from "./config-user"
 import { branchDirname, which } from "./fs-ops"
 import { getBaseBranch, getRepoRoot } from "./repo"
 import { log } from "./utils"
+import { buildVars, interpolate, makeCiaEnv } from "./vars"
 
 export async function deleteWorktree(
   worktreeDir: string,
@@ -188,72 +189,87 @@ ${claudeCmd}
   }
 }
 
-async function autoDetectEditor(): Promise<EditorType> {
-  const cursor = await which("cursor")
-  if (cursor) return "cursor"
-  const code = await which("code")
-  if (code) return "vscode"
-  const claude = await which("claude")
-  if (claude) return "claude"
-  log("No editor found in autodetection.")
-  return "auto"
+export type ResolvedEditCommand = {
+  command: string
+  dir: string
+  env: Record<string, string>
+  source: "configured" | "auto-detected"
 }
 
-export async function openEditor(dir: string, branchName?: string) {
+export async function resolveEditCommand(
+  dir: string,
+  branchName?: string,
+  branchPrefix?: string,
+): Promise<ResolvedEditCommand> {
   const repoConfig = await getRepoConfig(getProjectRoot())
+  const worktreeName = branchName ?? path.basename(dir)
+  const vars = buildVars(worktreeName, dir, branchPrefix)
+  const ciaEnv = makeCiaEnv(vars)
 
-  // If editCommand is configured, use it directly from the worktree root
   if (repoConfig.editCommand) {
-    log(`openEditor: Running custom edit command: ${repoConfig.editCommand} in ${dir}`)
-    spawn("sh", ["-c", repoConfig.editCommand], {
+    return {
+      command: interpolate(repoConfig.editCommand, vars),
+      dir,
+      env: ciaEnv,
+      source: "configured",
+    }
+  }
+
+  const cursor = await which("cursor")
+  if (cursor) return { command: `${cursor} -n ${dir}`, dir, env: ciaEnv, source: "auto-detected" }
+
+  const code = await which("code")
+  if (code) return { command: `${code} -n ${dir}`, dir, env: ciaEnv, source: "auto-detected" }
+
+  const claude = await which("claude")
+  if (claude) return { command: `${claude} (in new terminal)`, dir, env: ciaEnv, source: "auto-detected" }
+
+  throw new Error(
+    "No editor found. Install Cursor, VS Code, or Claude Code, or set editCommand in /config",
+  )
+}
+
+export async function openEditor(dir: string, branchName?: string, branchPrefix?: string) {
+  const repoConfig = await getRepoConfig(getProjectRoot())
+  const worktreeName = branchName ?? path.basename(dir)
+  const vars = buildVars(worktreeName, dir, branchPrefix)
+
+  // If editCommand is configured, interpolate vars and run it
+  if (repoConfig.editCommand) {
+    const cmd = interpolate(repoConfig.editCommand, vars)
+    log(`openEditor: Running edit command: ${cmd} in ${dir}`)
+    spawn("sh", ["-c", cmd], {
       cwd: dir,
+      env: { ...process.env, ...makeCiaEnv(vars) },
       detached: true,
       stdio: "ignore",
     }).unref()
     return
   }
 
-  const userConfig = await getUserConfig(getProjectRoot())
-  let editorType = userConfig.editor
+  // Auto-detect: cursor > vscode > claude
+  log(`openEditor: No editCommand configured, auto-detecting editor`)
 
-  log(`openEditor: Opening directory ${dir} with editor type: ${editorType}`)
-
-  // If auto, detect what's available
-  if (editorType === "auto") {
-    editorType = await autoDetectEditor()
-    log(`openEditor: Auto-detected editor type: ${editorType}`)
+  const cursor = await which("cursor")
+  if (cursor) {
+    log(`openEditor: Launching Cursor at ${dir}`)
+    return execa(cursor, ["-n", dir], { stdio: "inherit" })
   }
 
-  // Use full branch name if provided, otherwise fall back to directory basename
-  const worktreeName = branchName ?? path.basename(dir)
-
-  if (editorType === "cursor") {
-    const cursor = await which("cursor")
-    if (cursor) {
-      log(`openEditor: Launching Cursor at ${dir}`)
-      return execa(cursor, ["-n", dir], { stdio: "inherit" })
-    }
-    log("Cursor not found, falling back to VS Code")
-  } else if (editorType === "vscode") {
-    const code = await which("code")
-    if (code) {
-      log(`openEditor: Launching VS Code at ${dir}`)
-      return execa(code, ["-n", dir], { stdio: "inherit" })
-    }
-    log("VS Code not found, falling back to Claude Code")
-  } else if (editorType === "claude") {
-    const claude = await which("claude")
-    if (claude) {
-      log(`openEditor: Launching Claude Code at ${dir}`)
-      return openClaudeCode(dir, worktreeName, claude)
-    }
-    log("Claude Code not found")
+  const code = await which("code")
+  if (code) {
+    log(`openEditor: Launching VS Code at ${dir}`)
+    return execa(code, ["-n", dir], { stdio: "inherit" })
   }
 
-  // No editor found
-  log(`openEditor: No editor found. Please install Cursor, VS Code, or Claude Code.`)
+  const claude = await which("claude")
+  if (claude) {
+    log(`openEditor: Launching Claude Code at ${dir}`)
+    return openClaudeCode(dir, worktreeName, claude)
+  }
+
   throw new Error(
-    "No editor found. Please install Cursor, VS Code, or Claude Code, or configure editor in .cia/cia-user.jsonc",
+    "No editor found. Install Cursor, VS Code, or Claude Code, or set editCommand in /config",
   )
 }
 export interface CreateWorktreeResult {
@@ -328,8 +344,13 @@ export async function createWorktree(
     log(`createWorktree: Running onCreateScript: ${repoConfig.onCreateScript}`)
     try {
       const scriptPath = path.resolve(getProjectRoot(), repoConfig.onCreateScript)
-      const result = await execa("sh", ["-c", `source "${scriptPath}"`], {
+      const userConfig = await getUserConfig(getProjectRoot())
+      const vars = buildVars(branch, dir, userConfig.branchPrefix)
+      const ciaEnv = makeCiaEnv(vars)
+      const envHeader = Object.keys(ciaEnv).join(", ")
+      const result = await execa("sh", ["-c", `echo "CIA env: ${envHeader}"; source "${scriptPath}"`], {
         cwd: dir,
+        env: { ...process.env, ...ciaEnv },
       })
       log(`createWorktree: onCreateScript completed`)
       return { dir, scriptOutput: { stdout: result.stdout, stderr: result.stderr } }

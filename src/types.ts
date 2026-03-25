@@ -55,6 +55,8 @@ export type CommandMenu = {
   label: string
   description: string
   commands: WorktreeCommand[]
+  /** If true, pressing this key executes immediately (no submenu) */
+  direct?: boolean
 }
 
 export function getWorktreeMenus(worktree: Worktree): CommandMenu[] {
@@ -62,19 +64,21 @@ export function getWorktreeMenus(worktree: Worktree): CommandMenu[] {
     {
       key: "e",
       label: "Edit",
-      description: "Editor & tools",
-      commands: [{ key: "e", label: "Edit", description: "Open in editor" }],
+      description: "Open in editor",
+      commands: [],
+      direct: true,
     },
     {
       key: "g",
       label: "Git",
-      description: "Commit, sync, push",
+      description: "Commit, sync, push, delete",
       commands: [
         { key: "c", label: "Commit", description: "Stage all & commit in terminal" },
         { key: "s", label: "Sync", description: "Rebase onto main" },
         worktree.prNumber
           ? { key: "p", label: "Push", description: "Push to remote" }
           : { key: "p", label: "Create PR", description: "Create GitHub pull request" },
+        { key: "d", label: "Delete", description: "Delete worktree + branch" },
       ],
     },
     {
@@ -86,13 +90,15 @@ export function getWorktreeMenus(worktree: Worktree): CommandMenu[] {
         { key: "x", label: "Kill", description: "Stop running service" },
       ],
     },
-    {
-      key: "d",
-      label: "Delete",
-      description: "Worktree management",
-      commands: [{ key: "d", label: "Delete", description: "Delete worktree + branch" }],
-    },
   ]
+}
+
+export type EditCommandInfo = {
+  worktreeName: string
+  command: string
+  dir: string
+  env: Record<string, string>
+  source: "configured" | "auto-detected"
 }
 
 export type Dialog =
@@ -107,3 +113,4 @@ export type Dialog =
   | { mode: "confirm-sync"; candidate: OperationCandidate }
   | { mode: "confirm-kill-service"; worktree: string }
   | { mode: "confirm-cleanup-failed-create"; branch: string; existingBranch: boolean; error: string }
+  | { mode: "confirm-edit"; info: EditCommandInfo }

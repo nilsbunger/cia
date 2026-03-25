@@ -11,10 +11,8 @@ import {
 } from "./config-repo"
 import {
   type CiaUserConfig,
-  type EditorType,
   getUserConfig,
   setBranchPrefix as setUserBranchPrefix,
-  setEditor as setUserEditor,
 } from "./config-user"
 import { getRepoRoot } from "./repo"
 
@@ -66,7 +64,6 @@ export async function getConfig(): Promise<ConfigResult> {
       config: {
         branchPrefix: userConfig.branchPrefix,
         worktreeDir: userConfig.worktreeDir,
-        editor: userConfig.editor,
         baseBranch: repoConfig.baseBranch,
         runCommand: repoConfig.runCommand,
         runDir: repoConfig.runDir,
@@ -106,7 +103,6 @@ export async function createProject(): Promise<CiaConfig> {
   return {
     branchPrefix: userConfig.branchPrefix,
     worktreeDir: userConfig.worktreeDir,
-    editor: userConfig.editor,
     baseBranch: repoConfig.baseBranch,
     runCommand: repoConfig.runCommand,
     runDir: repoConfig.runDir,
@@ -117,10 +113,6 @@ export async function createProject(): Promise<CiaConfig> {
 
 export async function setBranchPrefix(prefix: string): Promise<void> {
   await setUserBranchPrefix(getProjectRoot(), prefix)
-}
-
-export async function setEditor(editor: EditorType): Promise<void> {
-  await setUserEditor(getProjectRoot(), editor)
 }
 
 export async function setBaseBranch(baseBranch: string): Promise<void> {

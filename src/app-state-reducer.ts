@@ -1,10 +1,8 @@
-import type { EditorType } from "./config-user"
 import { BRANCH_PREFIX } from "./constants"
 import type { Dialog, Worktree } from "./types"
 
 export type AppState = {
   branchPrefix: string
-  editor: EditorType
   baseBranch: string
   runCommand: string
   runDir: string
@@ -22,7 +20,6 @@ export type Action =
   | {
       type: "loaded-config"
       branchPrefix: string
-      editor: EditorType
       baseBranch: string
       runCommand: string
       runDir: string
@@ -39,7 +36,6 @@ export type Action =
 
 export const initialState: AppState = {
   branchPrefix: BRANCH_PREFIX,
-  editor: "auto",
   baseBranch: "",
   runCommand: "",
   runDir: "",
@@ -59,7 +55,6 @@ export function appReducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         branchPrefix: action.branchPrefix,
-        editor: action.editor,
         baseBranch: action.baseBranch,
         runCommand: action.runCommand,
         runDir: action.runDir,

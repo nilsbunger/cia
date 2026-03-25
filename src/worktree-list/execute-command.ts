@@ -5,12 +5,13 @@ import * as path from "node:path"
 import chalk from "chalk"
 import type { Action, AppState } from "../app-state-reducer"
 import { checkDeleteIssues, checkForConflicts, ensureWorktree } from "../cmd-helpers"
-import { deleteWorktree, openEditor } from "../cmd-ops"
+import { deleteWorktree, resolveEditCommand } from "../cmd-ops"
 import { getCiaTempDir } from "../config"
 import { pushBranch, syncBranch } from "../git-ops"
 import { isServiceRunning, runService } from "../service"
 import type { Worktree } from "../types"
 import { log } from "../utils"
+import { bashExports, buildVars } from "../vars"
 
 export async function executeWorktreeCommand(
   commandKey: string,
@@ -20,10 +21,27 @@ export async function executeWorktreeCommand(
   refresh: () => Promise<void>,
 ) {
   if (commandKey === "e") {
-    dispatch({ type: "set-msg", msg: `Opening ${wt.name}…` })
-    const dir = await ensureWorktree(wt.name)
-    await openEditor(dir, wt.name)
-    dispatch({ type: "set-msg", msg: `Opened ${wt.name}` })
+    dispatch({ type: "set-msg", msg: `Resolving editor command…` })
+    try {
+      const dir = await ensureWorktree(wt.name)
+      const resolved = await resolveEditCommand(dir, wt.name, state.branchPrefix)
+      dispatch({
+        type: "open-dialog",
+        dialog: {
+          mode: "confirm-edit",
+          info: {
+            worktreeName: wt.name,
+            command: resolved.command,
+            dir: resolved.dir,
+            env: resolved.env,
+            source: resolved.source,
+          },
+        },
+      })
+      // biome-ignore lint/suspicious/noExplicitAny: ok in catch
+    } catch (e: any) {
+      dispatch({ type: "set-msg", msg: chalk.red(e.message) })
+    }
     return
   }
 
@@ -31,7 +49,7 @@ export async function executeWorktreeCommand(
     dispatch({ type: "set-msg", msg: `Opening commit terminal for ${wt.name}…` })
     try {
       const dir = await ensureWorktree(wt.name)
-      await openCommitTerminal(wt.name, dir)
+      await openCommitTerminal(wt.name, dir, state.branchPrefix)
       dispatch({ type: "set-msg", msg: `Opened commit terminal for ${wt.name}` })
       // biome-ignore lint/suspicious/noExplicitAny: ok in catch
     } catch (e: any) {
@@ -53,7 +71,7 @@ export async function executeWorktreeCommand(
     try {
       const dir = await ensureWorktree(wt.name)
       const runDir = state.runDir ? path.join(dir, state.runDir) : dir
-      await runService(wt.name, runDir, state.runCommand)
+      await runService(wt.name, dir, runDir, state.runCommand, state.branchPrefix)
       dispatch({ type: "set-msg", msg: `Service started for ${wt.name} (new terminal)` })
       // biome-ignore lint/suspicious/noExplicitAny: ok in catch
     } catch (e: any) {
@@ -224,15 +242,19 @@ function getPreferredTerminal(): "warp" | "iterm" | "terminal" {
   return "terminal"
 }
 
-async function openCommitTerminal(worktreeName: string, dir: string): Promise<void> {
+async function openCommitTerminal(worktreeName: string, dir: string, branchPrefix?: string): Promise<void> {
   const tempDir = getCiaTempDir()
   const scriptPath = path.join(tempDir, "commit.sh")
   const windowTitle = `commit: ${worktreeName}`
 
+  const vars = buildVars(worktreeName, dir, branchPrefix)
   const script = `#!/bin/bash
 # CIA commit helper for worktree: ${worktreeName}
 
 echo -ne "\\033]0;${windowTitle}\\007"
+
+# CIA environment variables
+${bashExports(vars)}
 
 cd ${JSON.stringify(dir)} || { echo "ERROR: failed to cd to worktree dir"; exit 1; }
 

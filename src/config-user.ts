@@ -7,12 +7,9 @@ import { BRANCH_PREFIX, WORKTREES_DIR_NAME } from "./constants"
 const CIA_DIR = ".cia"
 const USER_CONFIG_FILE = "cia-user.jsonc"
 
-export type EditorType = "auto" | "cursor" | "vscode" | "claude"
-
 export interface CiaUserConfig {
   branchPrefix: string
   worktreeDir: string
-  editor: EditorType
 }
 
 function getDefaultBranchPrefix(): string {
@@ -22,10 +19,6 @@ function getDefaultBranchPrefix(): string {
 
 function getDefaultWorktreeDir(): string {
   return WORKTREES_DIR_NAME
-}
-
-function getDefaultEditor(): EditorType {
-  return "auto"
 }
 
 function userConfigPath(repoRoot: string): string {
@@ -38,7 +31,6 @@ export async function getUserConfig(repoRoot: string): Promise<CiaUserConfig> {
     return {
       branchPrefix: getDefaultBranchPrefix(),
       worktreeDir: getDefaultWorktreeDir(),
-      editor: getDefaultEditor(),
     }
   }
   try {
@@ -48,18 +40,14 @@ export async function getUserConfig(repoRoot: string): Promise<CiaUserConfig> {
       typeof data.branchPrefix === "string" ? data.branchPrefix : getDefaultBranchPrefix()
     const worktreeDir =
       typeof data.worktreeDir === "string" ? data.worktreeDir : getDefaultWorktreeDir()
-    const editor =
-      typeof data.editor === "string" ? (data.editor as EditorType) : getDefaultEditor()
     return {
       branchPrefix: prefix.endsWith("/") ? prefix : `${prefix}/`,
       worktreeDir,
-      editor,
     }
   } catch {
     return {
       branchPrefix: getDefaultBranchPrefix(),
       worktreeDir: getDefaultWorktreeDir(),
-      editor: getDefaultEditor(),
     }
   }
 }
@@ -75,7 +63,6 @@ export async function setBranchPrefix(repoRoot: string, prefix: string): Promise
   const config: CiaUserConfig = {
     branchPrefix: normalized,
     worktreeDir: current.worktreeDir,
-    editor: current.editor,
   }
   fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, "utf-8")
 }
@@ -90,22 +77,7 @@ export async function setWorktreeDir(repoRoot: string, worktreeDir: string): Pro
   const config: CiaUserConfig = {
     branchPrefix: current.branchPrefix,
     worktreeDir: worktreeDir.trim(),
-    editor: current.editor,
   }
   fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, "utf-8")
 }
 
-export async function setEditor(repoRoot: string, editor: EditorType): Promise<void> {
-  const ciaDir = path.join(repoRoot, CIA_DIR)
-  if (!fs.existsSync(ciaDir)) {
-    fs.mkdirSync(ciaDir, { recursive: true })
-  }
-  const file = userConfigPath(repoRoot)
-  const current = await getUserConfig(repoRoot)
-  const config: CiaUserConfig = {
-    branchPrefix: current.branchPrefix,
-    worktreeDir: current.worktreeDir,
-    editor,
-  }
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, "utf-8")
-}
