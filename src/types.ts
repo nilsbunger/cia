@@ -50,17 +50,48 @@ export type WorktreeCommand = {
   description: string
 }
 
-export function getWorktreeCommands(worktree: Worktree): WorktreeCommand[] {
+export type CommandMenu = {
+  key: string
+  label: string
+  description: string
+  commands: WorktreeCommand[]
+}
+
+export function getWorktreeMenus(worktree: Worktree): CommandMenu[] {
   return [
-    { key: "e", label: "Edit", description: "Open in editor" },
-    { key: "c", label: "Commit", description: "Stage all & commit in terminal" },
-    { key: "r", label: "Run", description: "Start service in new terminal" },
-    { key: "x", label: "Kill", description: "Stop running service" },
-    { key: "s", label: "Sync", description: "Rebase onto main" },
-    worktree.prNumber
-      ? { key: "p", label: "Push", description: "Push to remote" }
-      : { key: "p", label: "Create PR", description: "Create GitHub pull request" },
-    { key: "d", label: "Delete", description: "Delete worktree + branch" },
+    {
+      key: "e",
+      label: "Edit",
+      description: "Editor & tools",
+      commands: [{ key: "e", label: "Edit", description: "Open in editor" }],
+    },
+    {
+      key: "g",
+      label: "Git",
+      description: "Commit, sync, push",
+      commands: [
+        { key: "c", label: "Commit", description: "Stage all & commit in terminal" },
+        { key: "s", label: "Sync", description: "Rebase onto main" },
+        worktree.prNumber
+          ? { key: "p", label: "Push", description: "Push to remote" }
+          : { key: "p", label: "Create PR", description: "Create GitHub pull request" },
+      ],
+    },
+    {
+      key: "s",
+      label: "Service",
+      description: "Run & manage services",
+      commands: [
+        { key: "r", label: "Run", description: "Start service in new terminal" },
+        { key: "x", label: "Kill", description: "Stop running service" },
+      ],
+    },
+    {
+      key: "d",
+      label: "Delete",
+      description: "Worktree management",
+      commands: [{ key: "d", label: "Delete", description: "Delete worktree + branch" }],
+    },
   ]
 }
 

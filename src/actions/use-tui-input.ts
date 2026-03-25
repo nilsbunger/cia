@@ -83,6 +83,7 @@ export function useTuiInput(
         runCommand: result.config.runCommand ?? "",
         runDir: result.config.runDir ?? "",
         onCreateScript: result.config.onCreateScript ?? "",
+        editCommand: result.config.editCommand ?? "",
         repoRoot: result.repoRoot,
       })
     }

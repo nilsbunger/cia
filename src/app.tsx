@@ -45,6 +45,7 @@ export default function App() {
           runCommand: r.config.runCommand ?? "",
           runDir: r.config.runDir ?? "",
           onCreateScript: r.config.onCreateScript ?? "",
+          editCommand: r.config.editCommand ?? "",
           repoRoot: r.repoRoot,
         })
         refresh()
@@ -157,7 +158,7 @@ const ActiveView = ({
       <Box>
         <Text dimColor>
           {dialog.mode === "worktree-detail"
-            ? "Hints: ↑/↓ select command • enter execute • letter shortcut • esc back • q quit"
+            ? "Hints: ↑/↓ navigate • enter/letter select • esc back • q quit"
             : "Hints: ↑/↓ select • enter open • n new • / commands • ? help • q/esc quit"}
         </Text>
       </Box>

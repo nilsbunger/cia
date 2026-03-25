@@ -7,6 +7,7 @@ import {
   setRunCommand as setRepoRunCommand,
   setRunDir as setRepoRunDir,
   setOnCreateScript as setRepoOnCreateScript,
+  setEditCommand as setRepoEditCommand,
 } from "./config-repo"
 import {
   type CiaUserConfig,
@@ -70,6 +71,7 @@ export async function getConfig(): Promise<ConfigResult> {
         runCommand: repoConfig.runCommand,
         runDir: repoConfig.runDir,
         onCreateScript: repoConfig.onCreateScript,
+        editCommand: repoConfig.editCommand,
       },
       repoRoot,
     }
@@ -109,6 +111,7 @@ export async function createProject(): Promise<CiaConfig> {
     runCommand: repoConfig.runCommand,
     runDir: repoConfig.runDir,
     onCreateScript: repoConfig.onCreateScript,
+    editCommand: repoConfig.editCommand,
   }
 }
 
@@ -134,4 +137,8 @@ export async function setRunDir(runDir: string): Promise<void> {
 
 export async function setOnCreateScript(onCreateScript: string): Promise<void> {
   await setRepoOnCreateScript(getProjectRoot(), onCreateScript)
+}
+
+export async function setEditCommand(editCommand: string): Promise<void> {
+  await setRepoEditCommand(getProjectRoot(), editCommand)
 }

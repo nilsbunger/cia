@@ -14,6 +14,8 @@ export interface CiaRepoConfig {
   runDir?: string
   /** Shell script to run after a new worktree is created. Executed with cwd set to the new worktree directory. */
   onCreateScript?: string
+  /** Custom command to run when opening a worktree for editing. Runs with cwd set to the worktree root. */
+  editCommand?: string
 }
 
 function repoConfigPath(repoRoot: string): string {
@@ -33,6 +35,7 @@ export async function getRepoConfig(repoRoot: string): Promise<CiaRepoConfig> {
       runCommand: typeof data.runCommand === "string" ? data.runCommand : undefined,
       runDir: typeof data.runDir === "string" ? data.runDir : undefined,
       onCreateScript: typeof data.onCreateScript === "string" ? data.onCreateScript : undefined,
+      editCommand: typeof data.editCommand === "string" ? data.editCommand : undefined,
     }
   } catch {
     return {}
@@ -80,5 +83,16 @@ export async function setOnCreateScript(repoRoot: string, onCreateScript: string
   const file = repoConfigPath(repoRoot)
   const current = await getRepoConfig(repoRoot)
   const config: CiaRepoConfig = { ...current, onCreateScript: onCreateScript.trim() || undefined }
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
+}
+
+export async function setEditCommand(repoRoot: string, editCommand: string): Promise<void> {
+  const ciaDir = path.join(repoRoot, CIA_DIR)
+  if (!fs.existsSync(ciaDir)) {
+    fs.mkdirSync(ciaDir, { recursive: true })
+  }
+  const file = repoConfigPath(repoRoot)
+  const current = await getRepoConfig(repoRoot)
+  const config: CiaRepoConfig = { ...current, editCommand: editCommand.trim() || undefined }
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8")
 }

@@ -200,6 +200,19 @@ async function autoDetectEditor(): Promise<EditorType> {
 }
 
 export async function openEditor(dir: string, branchName?: string) {
+  const repoConfig = await getRepoConfig(getProjectRoot())
+
+  // If editCommand is configured, use it directly from the worktree root
+  if (repoConfig.editCommand) {
+    log(`openEditor: Running custom edit command: ${repoConfig.editCommand} in ${dir}`)
+    spawn("sh", ["-c", repoConfig.editCommand], {
+      cwd: dir,
+      detached: true,
+      stdio: "ignore",
+    }).unref()
+    return
+  }
+
   const userConfig = await getUserConfig(getProjectRoot())
   let editorType = userConfig.editor
 

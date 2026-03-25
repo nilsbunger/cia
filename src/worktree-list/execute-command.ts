@@ -108,9 +108,10 @@ export async function executeWorktreeCommand(
         await refresh()
         // biome-ignore lint/suspicious/noExplicitAny: ok in catch
       } catch (e: any) {
+        const detail = e.stderr?.trim() || e.shortMessage || e.message
         dispatch({
           type: "set-msg",
-          msg: chalk.red(`PR creation failed: ${e.shortMessage || e.message}`),
+          msg: chalk.red(`PR creation failed: ${detail}`),
         })
       }
     }

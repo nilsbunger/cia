@@ -1,11 +1,11 @@
 import chalk from "chalk"
 import { Box, Text, useInput } from "ink"
 import type React from "react"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { Action, AppState } from "../app-state-reducer"
 import { getServiceForWorktree, isServiceRunning } from "../service"
-import type { Worktree, WorktreeCommand } from "../types"
-import { getWorktreeCommands } from "../types"
+import type { CommandMenu, Worktree, WorktreeCommand } from "../types"
+import { getWorktreeMenus } from "../types"
 import { executeWorktreeCommand } from "./execute-command"
 
 type DetailProps = {
@@ -23,19 +23,34 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
   refresh,
   exit,
 }) => {
-  const commands = useMemo(() => getWorktreeCommands(worktree), [worktree])
+  const menus = useMemo(() => getWorktreeMenus(worktree), [worktree])
   const [idx, setIdx] = useState(0)
+  const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const service = getServiceForWorktree(worktree.name)
   const running = isServiceRunning(worktree.name)
   const processingRef = useRef(false)
+
+  const currentMenu = activeMenu ? (menus.find((m) => m.key === activeMenu) ?? null) : null
+  const itemCount = currentMenu ? currentMenu.commands.length : menus.length
+
+  // Clamp idx when items change (e.g. after refresh changes PR state)
+  useEffect(() => {
+    setIdx((i) => Math.min(i, Math.max(0, itemCount - 1)))
+  }, [itemCount])
 
   useInput(async (input, key) => {
     if (input === "q" || (key.ctrl && input === "c")) {
       exit()
       return
     }
-    if (key.escape) {
-      dispatch({ type: "dismiss" })
+    if (key.escape || key.backspace) {
+      if (activeMenu) {
+        const menuIdx = menus.findIndex((m) => m.key === activeMenu)
+        setActiveMenu(null)
+        setIdx(menuIdx >= 0 ? menuIdx : 0)
+      } else {
+        dispatch({ type: "dismiss" })
+      }
       return
     }
     if (key.upArrow || input === "k") {
@@ -43,25 +58,36 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
       return
     }
     if (key.downArrow || input === "j") {
-      setIdx((i) => Math.min(commands.length - 1, i + 1))
+      setIdx((i) => Math.min(itemCount - 1, i + 1))
       return
     }
-    // Guard against concurrent command execution
     if (processingRef.current) return
-    // Execute command by letter shortcut or ENTER on selected
-    const commandKey = key.return ? commands[idx].key : input
-    const cmdIdx = commands.findIndex((c) => c.key === commandKey)
-    if (cmdIdx === -1) return
-    processingRef.current = true
-    try {
-      // Move highlight to the command before executing, let render tick
-      if (cmdIdx !== idx) {
-        setIdx(cmdIdx)
-        await new Promise((r) => setTimeout(r, 80))
+
+    if (!activeMenu) {
+      // Top level: open a submenu
+      const menuKey = key.return ? menus[idx].key : input
+      const target = menus.find((m) => m.key === menuKey)
+      if (!target) return
+      setActiveMenu(menuKey)
+      setIdx(0)
+    } else {
+      // Inside a submenu: execute a command
+      const commands = currentMenu!.commands
+      const commandKey = key.return ? commands[idx].key : input
+      const cmdItem = commands.find((c) => c.key === commandKey)
+      if (!cmdItem) return
+
+      processingRef.current = true
+      try {
+        const cmdIdx = commands.findIndex((c) => c.key === commandKey)
+        if (cmdIdx !== idx) {
+          setIdx(cmdIdx)
+          await new Promise((r) => setTimeout(r, 80))
+        }
+        await executeWorktreeCommand(commandKey, worktree, state, dispatch, refresh)
+      } finally {
+        processingRef.current = false
       }
-      await executeWorktreeCommand(commandKey, worktree, state, dispatch, refresh)
-    } finally {
-      processingRef.current = false
     }
   })
 
@@ -79,10 +105,24 @@ export const WorktreeDetailView: React.FC<DetailProps> = ({
         </Box>
 
         <Box marginTop={1} flexDirection="column">
-          <Text>{chalk.bold("Commands:")}</Text>
-          {commands.map((cmd, i) => (
-            <CommandRow key={cmd.key} cmd={cmd} selected={i === idx} />
-          ))}
+          {currentMenu ? (
+            <>
+              <Text>
+                {chalk.bold("Commands:")} {chalk.cyan(currentMenu.label)}
+              </Text>
+              {currentMenu.commands.map((cmd, i) => (
+                <CommandRow key={cmd.key} cmd={cmd} selected={i === idx} />
+              ))}
+              <Text dimColor>{"  "}← esc back</Text>
+            </>
+          ) : (
+            <>
+              <Text>{chalk.bold("Commands:")}</Text>
+              {menus.map((menu, i) => (
+                <MenuRow key={menu.key} menu={menu} selected={i === idx} />
+              ))}
+            </>
+          )}
         </Box>
       </Box>
     </Box>
@@ -169,7 +209,7 @@ const ServiceSection: React.FC<{
             ))}
           </Box>
         )}
-        <Text dimColor> Press r to restart the service</Text>
+        <Text dimColor> Press s › r to restart the service</Text>
       </Box>
     )
   }
@@ -186,7 +226,7 @@ const PRSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
     return (
       <Box flexDirection="column" marginTop={1}>
         <Text>{chalk.dim("Pull Request:")}</Text>
-        <Text> No PR yet {chalk.dim("— press p to create")}</Text>
+        <Text> No PR yet {chalk.dim("— press g › p to create")}</Text>
       </Box>
     )
   }
@@ -215,11 +255,21 @@ const WarningsSection: React.FC<{ worktree: Worktree }> = ({ worktree }) => {
     <Box flexDirection="column" marginTop={1}>
       <Text color="yellow">
         {worktree.prunable
-          ? "⚠ Worktree is prunable — the directory is missing. Use d to delete."
-          : "⚠ Detached HEAD — this worktree is not on a branch. Use d to delete if no longer needed."}
+          ? "⚠ Worktree is prunable — the directory is missing. Use d › d to delete."
+          : "⚠ Detached HEAD — this worktree is not on a branch. Use d › d to delete if no longer needed."}
       </Text>
     </Box>
   )
+}
+
+const MenuRow: React.FC<{
+  menu: CommandMenu
+  selected: boolean
+}> = ({ menu, selected }) => {
+  const keyCol = chalk.yellow(menu.key.padEnd(2))
+  const label = `${menu.label} ›`.padEnd(14)
+  const line = `  ${keyCol} ${label} ${chalk.dim(menu.description)}`
+  return <Text>{selected ? chalk.inverse(line) : line}</Text>
 }
 
 const CommandRow: React.FC<{
